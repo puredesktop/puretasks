@@ -1,0 +1,8 @@
+export { applyTaskBoardPatchHandler } from './applyTaskBoardPatch'
+export { createMissionFromTaskHandler } from './createMissionFromTask'
+export { updateTaskChecklistHandler } from './updateTaskChecklist'
+export { updateTaskChecklistItemHandler } from './updateTaskChecklistItem'
+export { updateTaskCommentHandler } from './updateTaskComment'
+export { updateTaskHandler } from './updateTask'
+export { updateTaskColumnHandler } from './updateTaskColumn'
+export { updateTaskProjectHandler } from './updateTaskProject'

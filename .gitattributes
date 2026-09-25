@@ -1,0 +1,2 @@
+# This source previously contained literal NUL separators; always review it as text.
+src/components/glass/TaskCardOverlay.tsx text diff

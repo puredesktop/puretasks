@@ -1,0 +1,8 @@
+{
+  "appNames": [
+    "PureTasks"
+  ],
+  "idea": "Adopt the existing PureTasks built-in app for app-development work. PureTasks manages task boards, task cards, workflow columns, activity, resources, and portable .tasks packages.",
+  "questions": [],
+  "selectedAppName": "PureTasks"
+}

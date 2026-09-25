@@ -1,0 +1,7 @@
+export { deleteTaskChecklistHandler } from './deleteTaskChecklist'
+export { deleteTaskChecklistItemHandler } from './deleteTaskChecklistItem'
+export { deleteTaskCommentHandler } from './deleteTaskComment'
+export { deleteTaskHandler } from './deleteTask'
+export { deleteTaskColumnHandler } from './deleteTaskColumn'
+export { deleteTaskProjectHandler } from './deleteTaskProject'
+export { removeTaskResourceLinkHandler } from './removeTaskResourceLink'

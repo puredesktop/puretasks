@@ -1,0 +1,1002 @@
+{
+  "id": "tasks",
+  "name": "Puretasks",
+  "permissions": [
+    "settings",
+    "agents",
+    "filesystem"
+  ],
+  "entrypoint": {
+    "kind": "dev-url",
+    "url": "http://localhost:7111"
+  },
+  "app": {
+    "id": "plugin.tasks",
+    "slug": "tasks",
+    "name": "Puretasks",
+    "navigationLabel": "Tasks",
+    "productName": "pure.puretasks",
+    "kind": "tasks",
+    "description": "Track project work, review queues, and linked suite resources.",
+    "usePureDesktopAiPanel": true,
+    "brand": {
+      "letter": "t",
+      "label": "Tasks"
+    },
+    "openableFileKinds": [
+      "folder"
+    ],
+    "openableNameSuffixes": [
+      ".tasks"
+    ],
+    "createEntities": [
+      {
+        "id": "tasks-board",
+        "label": "Task board",
+        "description": "Create a new task board package.",
+        "kind": "package",
+        "appSlug": "tasks",
+        "defaultName": "Untitled board",
+        "packageSuffix": ".tasks",
+        "packageManifestFile": "manifest.json",
+        "packageContentFile": "tasks.json"
+      }
+    ],
+    "agents": {
+      "tools": [
+        {
+          "name": "getTasksContext",
+          "risk": "read",
+          "description": "Call this first. Returns the open board (path, draft/filed status, project id, name, description), the current filters, view mode, the selected task id, and task counts. Every other tool resolves ids and columns against this board.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "listTaskProjects",
+          "risk": "read",
+          "description": "List the boards PureTasks knows about. A project is a board is a `.tasks` package: the open board carries its projectId (the only project the write tools accept); every other board is addressed by path with openTaskProject or deleteTaskProject.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "listTaskColumns",
+          "risk": "read",
+          "description": "List the open board's columns in order, with labels and settings (collapsed, hidden, done). Column ids are the `status` values tasks carry.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "listTasks",
+          "risk": "read",
+          "description": "List the cards on the open board as compact rows (no notes, checklists, or comments — use getTask for one full card). Uses the board's current filters unless overridden. Call getTasksContext first.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string",
+                "description": "Optional project id; must be the open board's project (from getTasksContext)."
+              },
+              "status": {
+                "type": "string",
+                "description": "Optional status/column id filter, or all."
+              },
+              "query": {
+                "type": "string",
+                "description": "Optional search query override."
+              },
+              "label": {
+                "type": "string",
+                "description": "Optional label filter override."
+              }
+            }
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "getTask",
+          "risk": "read",
+          "description": "Return one full task card, including notes, labels, links, checklists, comments, and timestamps. Defaults to the selected task when taskId is omitted; ids come from listTasks.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string",
+                "description": "Optional task id. Defaults to the selected task."
+              }
+            }
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "listTaskActivity",
+          "risk": "read",
+          "description": "List recent task activity, optionally scoped to one task.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string",
+                "description": "Optional task id."
+              },
+              "limit": {
+                "type": "number",
+                "description": "Maximum rows to return, clamped to 1-200. Defaults to 50."
+              }
+            }
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "createTaskProject",
+          "description": "Create a new board (a new `.tasks` package) and make it the open board — the same as the header's New board. Tasks and columns created afterwards land on it. Returns the new project and its package path.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Board name; it also names the package folder."
+              },
+              "description": {
+                "type": "string",
+                "description": "Optional one-line board description, shown under the name."
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTaskProject",
+          "description": "Rename or describe the open board (its project id comes from getTasksContext), or set archiveDoneAfterDays. Renaming also renames the package folder. Other boards must be opened first with openTaskProject.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectId": {
+                "type": "string",
+                "description": "The open board's project id, from getTasksContext."
+              },
+              "name": {
+                "type": "string",
+                "description": "New board name."
+              },
+              "description": {
+                "type": "string",
+                "description": "New one-line description (empty string clears it)."
+              },
+              "archiveDoneAfterDays": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 365,
+                "description": "Done cards leave the board after this many days (kept in the file); 0 = never."
+              }
+            },
+            "required": [
+              "projectId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTaskProject",
+          "risk": "destructive",
+          "description": "PERMANENTLY delete a board package by path (from listTaskProjects) — the folder is removed outright, with no Trash and no snapshot to restore. Refuses the open board; open or create another board first. Only on an explicit user instruction that names the board.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Package path of the board to delete, from listTaskProjects. Cannot be the open board."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "openTaskProject",
+          "risk": "read",
+          "description": "Open another board (a `.tasks` package path from listTaskProjects) as the open board — the same as choosing it in the board switcher. The current board is saved first. Returns the opened project and its task count.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string",
+                "description": "Package path of the board to open, from listTaskProjects."
+              }
+            },
+            "required": [
+              "path"
+            ]
+          },
+          "requiresApproval": false
+        },
+        {
+          "name": "createTaskColumn",
+          "description": "Create a new board column/status on the open board. Column ids are derived from the label. Call getTasksContext first.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string",
+                "description": "Column label."
+              },
+              "beforeStatus": {
+                "type": "string",
+                "description": "Optional existing column id to insert before."
+              },
+              "collapsed": {
+                "type": "boolean",
+                "description": "Whether the column starts collapsed."
+              },
+              "hidden": {
+                "type": "boolean",
+                "description": "Whether the column starts hidden."
+              },
+              "done": {
+                "type": "boolean",
+                "description": "Whether tasks in this column count as complete."
+              }
+            },
+            "required": [
+              "label"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTaskColumn",
+          "description": "Rename, reorder, hide/collapse, change done behavior, or set a WIP limit (wipLimit; 0 removes it) for a column/status on the open board. Omitted fields are preserved. Column ids come from listTaskColumns.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Column/status id to update."
+              },
+              "label": {
+                "type": "string",
+                "description": "New column label."
+              },
+              "beforeStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Move before this column id, or null to move to the end."
+              },
+              "collapsed": {
+                "type": "boolean",
+                "description": "Set collapsed state."
+              },
+              "hidden": {
+                "type": "boolean",
+                "description": "Set hidden state."
+              },
+              "done": {
+                "type": "boolean",
+                "description": "Set whether this column counts as complete."
+              },
+              "wipLimit": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Work-in-progress limit for the column; 0 removes it."
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTaskColumn",
+          "risk": "destructive",
+          "description": "Delete a custom column/status and move its tasks to another column. Inbox, Doing, Review, and Done are system columns and cannot be deleted — hide them with updateTaskColumn instead. Returns a deletedSnapshot that applyTaskBoardPatch can restore (restoreColumn).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Column/status id to delete."
+              },
+              "targetStatus": {
+                "type": "string",
+                "description": "Column/status id that receives moved tasks."
+              }
+            },
+            "required": [
+              "status",
+              "targetStatus"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "createTask",
+          "description": "Create a new task card on the open board with optional details, labels, links, owner, due date, priority, column/status, blockedBy, parentId (a subtask), estimateHours, repeat and remindAt. A column at its WIP limit refuses new cards. Call getTasksContext first; column ids come from listTaskColumns.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "Task title."
+              },
+              "projectId": {
+                "type": "string",
+                "description": "Optional project id; must be the open board's project (from getTasksContext). Defaults to it."
+              },
+              "status": {
+                "type": "string",
+                "description": "Optional column/status id. Defaults to inbox."
+              },
+              "notes": {
+                "type": "string",
+                "description": "Task notes/description."
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "normal",
+                  "high"
+                ]
+              },
+              "ownerName": {
+                "type": "string"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dueAt": {
+                "type": "string",
+                "description": "Due date as YYYY-MM-DD or ISO string."
+              },
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "file",
+                        "writer",
+                        "book",
+                        "chapter",
+                        "chat-message",
+                        "agent-run"
+                      ],
+                      "description": "Kind of resource. Defaults to file."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Display title. Defaults to the path or resource id."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Filesystem path of the resource, if it is a file or package."
+                    },
+                    "appSlug": {
+                      "type": "string",
+                      "description": "App that opens the resource, e.g. writer or book."
+                    },
+                    "resourceId": {
+                      "type": "string",
+                      "description": "App-defined resource id, for resources that are not files."
+                    }
+                  }
+                },
+                "description": "Resource links to attach (the origin of the work, related files)."
+              },
+              "blockedBy": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Ids of cards this one waits on; the block clears when they are all done."
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The card this one is a subtask of; null detaches it."
+              },
+              "estimateHours": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "loggedHours": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "repeat": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "none",
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  null
+                ]
+              },
+              "remindAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ISO date-time for a reminder; null clears it."
+              }
+            },
+            "required": [
+              "title"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTask",
+          "description": "Edit, move, or reorder a task card on the open board. Omitted fields are preserved; status moves the card to that column (ids from listTaskColumns) and beforeTaskId places it within the column — a move into a column at its WIP limit is refused unless force is true. Also sets blockedBy (cards it waits on), parentId (subtask of), estimateHours, loggedHours, repeat (daily/weekly/monthly; a done card comes back with the next due date) and remindAt. Task ids come from listTasks.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string",
+                "description": "Task id to update."
+              },
+              "title": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "description": "Move to this column/status id."
+              },
+              "beforeTaskId": {
+                "type": "string",
+                "description": "Optional task id to place this task before within the target column."
+              },
+              "notes": {
+                "type": "string"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "normal",
+                  "high"
+                ]
+              },
+              "ownerName": {
+                "type": "string"
+              },
+              "labels": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dueAt": {
+                "type": "string"
+              },
+              "links": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "file",
+                        "writer",
+                        "book",
+                        "chapter",
+                        "chat-message",
+                        "agent-run"
+                      ],
+                      "description": "Kind of resource. Defaults to file."
+                    },
+                    "title": {
+                      "type": "string",
+                      "description": "Display title. Defaults to the path or resource id."
+                    },
+                    "path": {
+                      "type": "string",
+                      "description": "Filesystem path of the resource, if it is a file or package."
+                    },
+                    "appSlug": {
+                      "type": "string",
+                      "description": "App that opens the resource, e.g. writer or book."
+                    },
+                    "resourceId": {
+                      "type": "string",
+                      "description": "App-defined resource id, for resources that are not files."
+                    }
+                  }
+                },
+                "description": "Replaces the card's resource links when given; use addTaskResourceLink/removeTaskResourceLink to change one link."
+              },
+              "blockedBy": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Ids of cards this one waits on; the block clears when they are all done."
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The card this one is a subtask of; null detaches it."
+              },
+              "estimateHours": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "loggedHours": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "repeat": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "none",
+                  "daily",
+                  "weekly",
+                  "monthly",
+                  null
+                ]
+              },
+              "remindAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ISO date-time for a reminder; null clears it."
+              },
+              "force": {
+                "type": "boolean",
+                "description": "Move into a column that is at its WIP limit anyway."
+              }
+            },
+            "required": [
+              "taskId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTask",
+          "risk": "destructive",
+          "description": "Delete a task card by id (from listTasks). Returns a deletedSnapshot that applyTaskBoardPatch can restore (restoreTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string",
+                "description": "Task id to delete."
+              }
+            },
+            "required": [
+              "taskId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "createTaskComment",
+          "description": "Add a comment to a task card (task ids from listTasks).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "authorName": {
+                "type": "string",
+                "description": "Optional author display name. Defaults to Agent."
+              }
+            },
+            "required": [
+              "taskId",
+              "text"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTaskComment",
+          "description": "Edit a task comment's text or author name (comment ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "commentId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "authorName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "commentId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTaskComment",
+          "risk": "destructive",
+          "description": "Delete a comment from a task card (comment ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "commentId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "commentId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "createTaskChecklist",
+          "description": "Create a checklist on a task card, optionally with initial items (task ids from listTasks).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "taskId",
+              "title"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTaskChecklist",
+          "description": "Rename a checklist on a task card (checklist ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "checklistId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "checklistId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTaskChecklist",
+          "risk": "destructive",
+          "description": "Delete a checklist from a task card (checklist ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "checklistId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "checklistId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "createTaskChecklistItem",
+          "description": "Add an item to a task checklist (checklist ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "checklistId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "done": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "taskId",
+              "checklistId",
+              "text"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "updateTaskChecklistItem",
+          "description": "Edit a checklist item's text or toggle its done state (item ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "checklistId": {
+                "type": "string"
+              },
+              "itemId": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              },
+              "done": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "taskId",
+              "checklistId",
+              "itemId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "deleteTaskChecklistItem",
+          "risk": "destructive",
+          "description": "Delete an item from a task checklist (item ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "checklistId": {
+                "type": "string"
+              },
+              "itemId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "checklistId",
+              "itemId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "addTaskResourceLink",
+          "description": "Attach a linked file, app resource, or external reference to a task card — the origin of the work, a related document. Task ids come from listTasks.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "link": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "file",
+                      "writer",
+                      "book",
+                      "chapter",
+                      "chat-message",
+                      "agent-run"
+                    ],
+                    "description": "Kind of resource. Defaults to file."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Display title. Defaults to the path or resource id."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Filesystem path of the resource, if it is a file or package."
+                  },
+                  "appSlug": {
+                    "type": "string",
+                    "description": "App that opens the resource, e.g. writer or book."
+                  },
+                  "resourceId": {
+                    "type": "string",
+                    "description": "App-defined resource id, for resources that are not files."
+                  }
+                },
+                "description": "Resource link to attach."
+              }
+            },
+            "required": [
+              "taskId",
+              "link"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "removeTaskResourceLink",
+          "risk": "destructive",
+          "description": "Remove a linked resource from a task card (link ids from getTask).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "linkId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "taskId",
+              "linkId"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "applyTaskBoardPatch",
+          "risk": "destructive",
+          "description": "Apply or dry-run an ordered batch of column and task operations on the open board. Use dryRun: true first for anything broad; the result lists each operation's outcome plus a compact preview (column counts, touched task ids), never the whole board. restoreColumn and restoreTask take the deletedSnapshot payloads returned by deleteTaskColumn and deleteTask. Board-level (project) operations are not patch operations — use createTaskProject, updateTaskProject, deleteTaskProject, and openTaskProject.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "dryRun": {
+                "type": "boolean",
+                "description": "If true, return a preview without persisting changes."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Short user-visible reason recorded in task activity when persisted."
+              },
+              "operations": {
+                "type": "array",
+                "description": "Ordered patch operations. Each carries the same fields as the matching tool (createTask, updateTask, deleteTask, createColumn/updateColumn/deleteColumn mirror the column tools; comment, checklist, and link operations mirror theirs). restoreColumn and restoreTask spread a deletedSnapshot payload.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "createColumn",
+                        "updateColumn",
+                        "deleteColumn",
+                        "restoreColumn",
+                        "createTask",
+                        "updateTask",
+                        "deleteTask",
+                        "restoreTask",
+                        "createTaskComment",
+                        "updateTaskComment",
+                        "deleteTaskComment",
+                        "createTaskChecklist",
+                        "updateTaskChecklist",
+                        "deleteTaskChecklist",
+                        "createTaskChecklistItem",
+                        "updateTaskChecklistItem",
+                        "deleteTaskChecklistItem",
+                        "addTaskResourceLink",
+                        "removeTaskResourceLink"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "operations"
+            ]
+          },
+          "requiresApproval": true
+        },
+        {
+          "name": "createMissionFromTask",
+          "description": "Turn a card into a mission the shell runs (the card's own “Create mission” button). kind: 'do' works the task and moves it to Review, 'steps' writes a checklist only, 'draft' writes the first draft of the linked document, 'dependencies' links what the card waits on. The mission's progress shows on the card (getTask.missions). Use when the user asks for the work to be done or planned by a mission; never also do the work yourself. Requires approval: starts a mission.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "taskId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "do",
+                  "steps",
+                  "draft",
+                  "dependencies"
+                ]
+              }
+            },
+            "required": [
+              "taskId"
+            ],
+            "additionalProperties": false
+          },
+          "requiresApproval": true
+        }
+      ]
+    }
+  }
+}
