@@ -11,7 +11,7 @@ export const GlassShell = styled.div`
   --tasks-acc-ink: color-mix(in oklab, var(--tasks-acc) 70%, var(--tasks-ink));
   --tasks-panel: var(--glass-panel);
   --tasks-panel-strong: var(--glass-panel-strong);
-  --tasks-card: color-mix(in srgb, var(--pure-chrome-paper) 92%, transparent);
+  --tasks-card: var(--glass-card);
   --tasks-edge: var(--glass-edge);
   --tasks-edge-strong: var(--glass-edge-strong);
   --tasks-line: var(--glass-line);
@@ -37,10 +37,6 @@ export const GlassShell = styled.div`
   overflow: hidden;
   color: var(--tasks-ink);
   font-family: var(--platform-typography-font-family);
-
-  :root[data-platform-theme='dark'] & {
-    --tasks-card: color-mix(in srgb, var(--pure-chrome-paper) 88%, transparent);
-  }
 
   /* Solid: the same tokens, flat values. Paper panels on the platform ground,
      hairline edges, no blur; nothing shows through. */
