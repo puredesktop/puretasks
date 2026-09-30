@@ -72,13 +72,6 @@ export const TopBar = styled.div`
   -webkit-backdrop-filter: var(--tasks-blur);
 `
 
-export const Wordmark = styled.span`
-  font-size: 16px;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  strong { font-weight: 700; color: var(--tasks-acc); }
-`
-
 export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -100,12 +93,14 @@ export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: b
   kbd { font-family: var(--tasks-mono); font-size: 10.5px; opacity: 0.75; }
 `
 
+/* A visible track: the pale well alone read as nothing on the pale bar. */
 export const ViewTabs = styled.div`
   display: flex;
   gap: 2px;
   padding: 3px;
   border-radius: 10px;
-  background: var(--tasks-well);
+  background: color-mix(in srgb, var(--tasks-ink) 6%, transparent);
+  box-shadow: inset 0 0 0 1px var(--tasks-line);
 `
 
 export const ViewTab = styled.button<{ $on?: boolean }>`
@@ -114,10 +109,12 @@ export const ViewTab = styled.button<{ $on?: boolean }>`
   border: 0;
   border-radius: 8px;
   background: ${({ $on }) => ($on ? 'var(--tasks-panel-strong)' : 'transparent')};
-  color: ${({ $on }) => ($on ? 'var(--tasks-ink)' : 'var(--tasks-muted)')};
+  color: ${({ $on }) => ($on ? 'var(--tasks-ink)' : 'color-mix(in srgb, var(--tasks-ink) 72%, transparent)')};
   font: ${({ $on }) => ($on ? '600' : '500')} 13px var(--platform-typography-font-family);
-  box-shadow: ${({ $on }) => ($on ? '0 1px 2px rgba(16, 22, 40, 0.08)' : 'none')};
+  box-shadow: ${({ $on }) =>
+    $on ? '0 0 0 1px var(--tasks-line), 0 1px 3px rgba(16, 22, 40, 0.12)' : 'none'};
   cursor: pointer;
+  &:hover { color: var(--tasks-ink); }
   &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
 `
 
@@ -160,6 +157,8 @@ export const Rail = styled.nav`
   box-sizing: border-box;
   padding: 12px 10px;
   overflow: auto;
+  /* A hairline between the pane and the board. */
+  border-right: 1px solid var(--tasks-edge);
 `
 
 export const RailRow = styled.button<{ $on?: boolean }>`
