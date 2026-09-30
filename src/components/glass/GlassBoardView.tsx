@@ -70,6 +70,13 @@ export function GlassBoardView({ session, callbacks }: { session: TasksSessionSt
   const [over, setOver] = useState<{ status: string; before: string | null; lane?: string } | null>(null)
   const [refused, setRefused] = useState<string | null>(null)
   const [adding, setAdding] = useState<string | null>(null)
+  // A new column is named in place, at the end of the board.
+  const [newColumn, setNewColumn] = useState<string | null>(null)
+  const commitNewColumn = (): void => {
+    const label = newColumn?.trim()
+    setNewColumn(null)
+    if (label) void session.createColumn(label)
+  }
   const [draft, setDraft] = useState('')
   const [editing, setEditing] = useState<{ status: string; label: string } | null>(null)
   const [menu, setMenu] = useState<{ status: string; rect: DOMRect } | null>(null)
@@ -250,6 +257,28 @@ export function GlassBoardView({ session, callbacks }: { session: TasksSessionSt
         {swimlanes === 'none' ? (
           <>
             {columns.map(column => renderColumn(column, lanes[0], true))}
+            <div style={{ flexShrink: 0, width: 250 }}>
+              {newColumn === null ? (
+                <AddRow type="button" style={{ width: '100%', height: 40 }} onClick={() => setNewColumn('')}>
+                  <Plus size={14} aria-hidden="true" />Add column
+                </AddRow>
+              ) : (
+                <GlassColumn>
+                  <ColumnTitleField
+                    autoFocus
+                    aria-label="New column name"
+                    placeholder="Column name"
+                    value={newColumn}
+                    onChange={event => setNewColumn(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') commitNewColumn()
+                      if (event.key === 'Escape') setNewColumn(null)
+                    }}
+                    onBlur={commitNewColumn}
+                  />
+                </GlassColumn>
+              )}
+            </div>
             {session.hiddenColumns.length ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, width: 160, padding: '10px 0' }}>
                 <MenuHead>Hidden</MenuHead>
