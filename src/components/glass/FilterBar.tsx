@@ -1,9 +1,13 @@
+import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { MISSION_KINDS, type MissionKind } from '../../lib/missions'
 import { columnAtLimit, DEFAULT_FILTERS } from '../../lib/taskModel'
 import type { TaskPriority, TasksAppSettings } from '../../types'
 import { Divider, FilterRow, Kicker, MenuHead, MenuItem, Meta, Pill, Popover, SelectionBar } from './glassStyles'
+
+/** A drawn chevron, not a typed ▾: it sits on the text's centre line. */
+const Caret = (): React.ReactElement => <ChevronDown size={12} strokeWidth={2} aria-hidden="true" style={{ opacity: 0.7, marginLeft: -2 }} />
 
 export type GroupBy = NonNullable<TasksAppSettings['groupBy']>
 export type Swimlanes = NonNullable<TasksAppSettings['swimlanes']>
@@ -77,13 +81,13 @@ export function FilterBar({
       <FilterRow ref={rowRef}>
         <SelectionBar role="toolbar" aria-label="Selected cards">
           <strong>{ids.length} selected</strong>
-          <Pill type="button" onClick={toggle('selMove')}>Move to ▾</Pill>
-          <Pill type="button" onClick={toggle('selOwner')}>Owner ▾</Pill>
-          <Pill type="button" onClick={toggle('selLabel')}>Label ▾</Pill>
-          <Pill type="button" onClick={toggle('selDue')}>Due ▾</Pill>
-          <Pill type="button" onClick={toggle('selPriority')}>Priority ▾</Pill>
+          <Pill type="button" onClick={toggle('selMove')}>Move to <Caret /></Pill>
+          <Pill type="button" onClick={toggle('selOwner')}>Owner <Caret /></Pill>
+          <Pill type="button" onClick={toggle('selLabel')}>Label <Caret /></Pill>
+          <Pill type="button" onClick={toggle('selDue')}>Due <Caret /></Pill>
+          <Pill type="button" onClick={toggle('selPriority')}>Priority <Caret /></Pill>
           <Divider />
-          {session.missionsEnabled ? <Pill type="button" onClick={toggle('selMission')}>Create mission ▾</Pill> : null}
+          {session.missionsEnabled ? <Pill type="button" onClick={toggle('selMission')}>Create mission <Caret /></Pill> : null}
           <Pill type="button" onClick={() => void patchSelected({ archivedAt: new Date().toISOString() }, 'Archived')}>Archive</Pill>
           <Pill type="button" $quiet aria-label="Clear selection" onClick={onClearSelection}>×</Pill>
         </SelectionBar>
@@ -103,13 +107,13 @@ export function FilterBar({
     <FilterRow ref={rowRef}>
       <Kicker>Filters</Kicker>
       <Pill type="button" $on={filters.status !== 'all'} onClick={toggle('label')} style={{ display: 'none' }}>x</Pill>
-      <Pill type="button" $on={Boolean(filters.label)} onClick={toggle('label')}>{filters.label ? `Label: ${filters.label} ×` : 'Label ▾'}</Pill>
-      <Pill type="button" $on={Boolean(dueFilter)} onClick={toggle('due')}>{dueFilter ? `Due: ${dueFilter} ×` : 'Due ▾'}</Pill>
-      <Pill type="button" $on={Boolean(priorityFilter)} onClick={toggle('priority')}>{priorityFilter ? `Priority: ${priorityFilter} ×` : 'Priority ▾'}</Pill>
+      <Pill type="button" $on={Boolean(filters.label)} onClick={toggle('label')}>{filters.label ? `Label: ${filters.label} ×` : <>Label <Caret /></>}</Pill>
+      <Pill type="button" $on={Boolean(dueFilter)} onClick={toggle('due')}>{dueFilter ? `Due: ${dueFilter} ×` : <>Due <Caret /></>}</Pill>
+      <Pill type="button" $on={Boolean(priorityFilter)} onClick={toggle('priority')}>{priorityFilter ? `Priority: ${priorityFilter} ×` : <>Priority <Caret /></>}</Pill>
       {active ? <Pill type="button" $quiet onClick={() => session.setFilters(DEFAULT_FILTERS)}>Clear</Pill> : null}
       <Divider />
-      {session.viewMode === 'board' ? <Pill type="button" $on={swimlanes !== 'none'} onClick={toggle('lanes')}>Swimlanes: {swimlanes} ▾</Pill> : null}
-      {session.viewMode === 'list' ? <Pill type="button" $on={groupBy !== 'none'} onClick={toggle('group')}>Group: {groupBy} ▾</Pill> : null}
+      {session.viewMode === 'board' ? <Pill type="button" $on={swimlanes !== 'none'} onClick={toggle('lanes')}>Swimlanes: {swimlanes} <Caret /></Pill> : null}
+      {session.viewMode === 'list' ? <Pill type="button" $on={groupBy !== 'none'} onClick={toggle('group')}>Group: {groupBy} <Caret /></Pill> : null}
       <span style={{ flex: 1 }} />
       <Meta>{summary}</Meta>
       {open === 'label' ? pop(<><MenuHead>Label</MenuHead>{session.labels.map(label => <MenuItem key={label} type="button" $on={filters.label === label} onClick={() => { session.setFilters({ ...filters, label: filters.label === label ? '' : label }); setOpen(null) }}>{label}</MenuItem>)}{!session.labels.length ? <Meta style={{ padding: '6px 10px' }}>No labels yet.</Meta> : null}</>) : null}

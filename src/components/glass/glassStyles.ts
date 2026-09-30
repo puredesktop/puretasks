@@ -77,8 +77,9 @@ export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: b
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 11px;
-  border-radius: 999px;
+  padding: 0 10px;
+  /* The view tabs' shape, not a pill: one family of controls in the bar. */
+  border-radius: 8px;
   border: 1px solid ${({ $on, $accent }) => ($on || $accent ? 'transparent' : 'var(--tasks-line)')};
   background: ${({ $on, $accent, $quiet }) =>
     $accent ? 'var(--tasks-acc)' : $on ? 'var(--tasks-ink)' : $quiet ? 'transparent' : 'var(--tasks-panel-strong)'};
@@ -205,13 +206,14 @@ export const Main = styled.main`
   gap: 10px;
   min-width: 0;
   min-height: 0;
-  padding: 12px 14px 0 4px;
+  /* Breathing room after the rail's hairline. */
+  padding: 12px 14px 0 16px;
 `
 
 export const FilterRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   min-height: 30px;
 `
@@ -221,7 +223,8 @@ export const Kicker = styled.span`
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tasks-faint);
+  color: var(--tasks-muted);
+  margin-right: 2px;
 `
 
 export const Divider = styled.span`
