@@ -129,6 +129,27 @@ describe('useTasksSession', () => {
       description: 'Ship it',
     })
   })
+
+  it('saves, updates, and removes board-owned filter views', async () => {
+    const session = await mount()
+    await act(async () => {
+      await session.saveFilterView('Launch review', { owner: 'Maya', status: 'review', label: 'launch' })
+    })
+    expect(latest!.store.filterViews).toHaveLength(1)
+    expect(latest!.store.filterViews![0]).toMatchObject({
+      name: 'Launch review',
+      filters: { owner: 'Maya', status: 'review', label: 'launch' },
+    })
+    const viewId = latest!.store.filterViews![0].id
+    await act(async () => {
+      await session.updateFilterView(viewId, 'Launch review', { owner: 'Alex', status: 'doing', label: '' })
+    })
+    expect(latest!.store.filterViews![0].filters).toEqual({ owner: 'Alex', status: 'doing', label: '' })
+    await act(async () => {
+      await session.deleteFilterView(viewId)
+    })
+    expect(latest!.store.filterViews).toEqual([])
+  })
 })
 
 it('reconciles completion timestamps when a column changes its done meaning', async () => {

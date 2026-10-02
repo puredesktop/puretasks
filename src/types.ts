@@ -140,16 +140,35 @@ export interface TasksStore {
   columns?: TaskColumn[]
   tasks: SuiteTask[]
   activity: TaskActivity[]
+  /** Named views store filter definitions only; task cards remain the source of truth. */
+  filterViews?: TaskFilterView[]
 }
 
 export interface TaskFilters {
   query: string
   status: TaskStatus | 'all'
   label: string
+  /** Empty means any owner; `__none__` means tasks without an owner. */
+  owner?: string
   /** '' | 'overdue' | 'today' | 'week' | 'none' */
   due?: string
   /** '' | TaskPriority */
   priority?: string
+}
+
+/** The board-owned filters captured by a named view. */
+export interface TaskFilterDefinition {
+  owner: string
+  status: TaskStatus | 'all'
+  label: string
+}
+
+export interface TaskFilterView {
+  id: string
+  name: string
+  filters: TaskFilterDefinition
+  createdAt: string
+  updatedAt: string
 }
 
 /** Where the app is: one board, or a cross-board place. */

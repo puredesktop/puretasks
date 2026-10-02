@@ -8,10 +8,12 @@ import {
   emptyTasksStore,
   moveTaskStatus,
   normalizeResourceLink,
+  normalizeTaskFilterViews,
   normalizeTasksStore,
   taskColumnsForStore,
   updateTaskDetails,
   visibleTasksForProject,
+  UNASSIGNED_OWNER_FILTER,
 } from './taskModel'
 
 describe('taskModel', () => {
@@ -141,6 +143,41 @@ describe('taskModel', () => {
         label: 'book',
       }).map(item => item.id),
     ).toEqual([task.id])
+  })
+
+  it('filters live tasks by owner, status, and label without copying task data', () => {
+    const store = emptyTasksStore('2026-01-01')
+    const projectId = store.projects[0].id
+    const maya = updateTaskDetails(createTask(projectId, 'Maya review', 'review', '2026-01-01'), { ownerName: ' Maya ', labels: ['launch'] })
+    const other = updateTaskDetails(createTask(projectId, 'Other work', 'review', '2026-01-01'), { ownerName: 'Alex', labels: ['launch'] })
+    store.tasks = [maya, other]
+    expect(visibleTasksForProject(store, projectId, { query: '', status: 'review', label: 'launch', owner: 'maya' }).map(task => task.id)).toEqual([maya.id])
+    expect(visibleTasksForProject(store, projectId, { query: '', status: 'all', label: '', owner: UNASSIGNED_OWNER_FILTER })).toEqual([])
+  })
+
+  it('normalizes and preserves named filter view definitions', () => {
+    const view = normalizeTaskFilterViews([{
+      id: 'view-1',
+      name: '  Launch review  ',
+      filters: { owner: ' Maya ', status: 'review', label: ' launch ' },
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-02',
+    }])
+    expect(view).toEqual([{
+      id: 'view-1',
+      name: 'Launch review',
+      filters: { owner: 'Maya', status: 'review', label: 'launch' },
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-02',
+    }])
+    const store = normalizeTasksStore({
+      schemaVersion: 1,
+      projects: [createProject('Project', '', '2026-01-01')],
+      tasks: [],
+      activity: [],
+      filterViews: view,
+    })
+    expect(store.filterViews).toEqual(view)
   })
 
   it('normalizes older tasks with card detail defaults', () => {

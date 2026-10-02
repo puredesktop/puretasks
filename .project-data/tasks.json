@@ -6,5 +6,14 @@
     "status": "done",
     "details": "Existing app source at commit dc4c053bfb64505aba0bae22ffab11f51acd2826.",
     "commitHash": "dff3d3caf06a5e949fec7c95e648e50351d4c8ed"
+  },
+  {
+    "id": "e2b3319b-2f87-4447-a349-0baf47f7a916",
+    "title": "Implement save named board filter views",
+    "details": "Implement saving named board filter views in the current app, allowing users to save owner, status, and tag filters as named views, reopen, update, or remove them by storing filter definitions, while following repository instructions and keeping changes focused.",
+    "scope": "app",
+    "status": "running",
+    "devSessionId": "89eefac9-2e1e-4cc6-8e3b-178d7d6f8372",
+    "devRequestId": "e2b3319b-2f87-4447-a349-0baf47f7a916"
   }
 ]

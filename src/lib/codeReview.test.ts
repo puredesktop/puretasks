@@ -44,5 +44,13 @@ it('rejects multiple projects instead of losing boards on next save', () => {
 })
 it('round trips a valid single-board package', () => {
   const store = board()
+  store.filterViews = [{
+    id: 'view-1',
+    name: 'Maya review',
+    filters: { owner: 'Maya', status: 'review', label: 'launch' },
+    createdAt: '2026-09-20',
+    updatedAt: '2026-09-20',
+  }]
   expect(parseTaskPackageStore(taskPackageContent(store, store.projects[0])).tasks).toEqual(store.tasks)
+  expect(parseTaskPackageStore(taskPackageContent(store, store.projects[0])).filterViews).toEqual(store.filterViews)
 })
