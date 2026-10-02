@@ -44,6 +44,7 @@ export function taskPackageContent(
       columns: taskColumnsForStore(store),
       tasks: store.tasks.filter(task => task.projectId === project.id),
       activity: store.activity.filter(item => taskIds.has(item.taskId)),
+      filterViews: store.filterViews ?? [],
     },
     null,
     2,
