@@ -1,6 +1,3 @@
 node_modules/
 dist/
 .swc/
-
-!/.project-data/
-!/.project-data/**

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listTaskBoards } from '../bridge/platformBridge'
+import { mapConcurrent } from '../lib/mapConcurrent'
 import type { TaskBoardListEntry, TasksStore } from '../types'
 
 export interface BoardIndexEntry extends TaskBoardListEntry {
@@ -8,64 +9,73 @@ export interface BoardIndexEntry extends TaskBoardListEntry {
   error?: string
 }
 
-/**
- * Every `.tasks` board the shell knows, with contents, for the rail and the
- * cross-board places (My day, Upcoming, Boards). The open board is served
- * from the live session, not from disk, so its counts are never stale.
- */
-export function useBoardsIndex({
-  readBoard,
-  openPath,
-  openStore,
-  enabled,
-}: {
+/** Other boards come from storage; the open board always comes from its live session. */
+export function useBoardsIndex({ readBoard, openPath, openStore, enabled }: {
   readBoard: (path: string) => Promise<TasksStore>
   openPath: string | null
   openStore: TasksStore
   enabled: boolean
-}): { boards: BoardIndexEntry[]; loading: boolean; refresh: () => Promise<void> } {
+}): { boards: BoardIndexEntry[]; loading: boolean; error: string | null; refresh: () => Promise<void> } {
   const [entries, setEntries] = useState<BoardIndexEntry[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const generation = useRef(0)
+  const active = useRef(enabled)
+  const pending = useRef<{ generation: number; promise: Promise<void> } | null>(null)
+  const live = useRef({ openPath, openStore })
+  live.current = { openPath, openStore }
 
-  const refresh = useCallback(async () => {
-    if (!enabled) return
-    const mine = ++generation.current
+  const refresh = useCallback((): Promise<void> => {
+    if (!enabled || !active.current) return Promise.resolve()
+    const mine = generation.current
+    if (pending.current?.generation === mine) return pending.current.promise
+    const isCurrent = () => mine === generation.current
     setLoading(true)
-    try {
-      const list = await listTaskBoards()
-      const read = await Promise.all(
-        list.map(async entry => {
+    const promise = (async () => {
+      try {
+        const list = await listTaskBoards()
+        if (!isCurrent()) return
+        const read = await mapConcurrent(list, async entry => {
           const clean = entry.path.replace(/\/+$/, '')
-          try {
-            return { ...entry, path: clean, store: await readBoard(clean) } as BoardIndexEntry
-          } catch (error) {
-            return { ...entry, path: clean, store: null, error: error instanceof Error ? error.message : String(error) } as BoardIndexEntry
+          if (clean === live.current.openPath?.replace(/\/+$/, '')) {
+            return { ...entry, path: clean, store: live.current.openStore }
           }
-        }),
-      )
-      if (mine === generation.current) setEntries(read)
-    } finally {
-      if (mine === generation.current) setLoading(false)
-    }
+          try {
+            return { ...entry, path: clean, store: await readBoard(clean) }
+          } catch (failure) {
+            return { ...entry, path: clean, store: null, error: failure instanceof Error ? failure.message : String(failure) }
+          }
+        }, isCurrent)
+        if (isCurrent()) { setEntries(read); setError(null) }
+      } catch (failure) {
+        // Keep the previous usable index and offer retry; background scans never reject.
+        if (isCurrent()) setError(failure instanceof Error ? failure.message : String(failure))
+      } finally {
+        if (isCurrent()) { setLoading(false); pending.current = null }
+      }
+    })()
+    pending.current = { generation: mine, promise }
+    return promise
   }, [enabled, readBoard])
 
-  useEffect(() => { void refresh() }, [refresh])
-  // Another app or a mission may write a board while this one is open: re-read every so often.
   useEffect(() => {
-    if (!enabled) return
+    active.current = enabled
+    if (!enabled) { setLoading(false); setError(null); return }
+    void refresh()
     const timer = setInterval(() => { void refresh() }, 60_000)
-    return () => clearInterval(timer)
-  }, [enabled, refresh])
+    return () => { clearInterval(timer); active.current = false; generation.current += 1 }
+  }, [enabled, openPath, refresh])
 
   const boards = useMemo(() => {
     const clean = openPath?.replace(/\/+$/, '') ?? null
-    const merged = entries.map(entry => (entry.path === clean ? { ...entry, store: openStore, name: openStore.projects[0]?.name ?? entry.name } : entry))
+    const merged = (enabled ? entries : []).map(entry => (entry.path === clean
+      ? { ...entry, store: openStore, error: undefined, name: openStore.projects[0]?.name ?? entry.name }
+      : entry))
     if (clean && !merged.some(entry => entry.path === clean)) {
       merged.unshift({ path: clean, name: openStore.projects[0]?.name ?? 'Untitled board', isDraft: false, store: openStore })
     }
     return merged.sort((a, b) => a.name.localeCompare(b.name))
-  }, [entries, openPath, openStore])
+  }, [enabled, entries, openPath, openStore])
 
-  return { boards, loading, refresh }
+  return { boards, loading, error, refresh }
 }

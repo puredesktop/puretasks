@@ -41,6 +41,10 @@ export function FilterBar({
   const [viewName, setViewName] = useState('')
   const rowRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
+    setOpen(null)
+    setViewName('')
+  }, [session.activeProject.id])
+  useEffect(() => {
     if (!open) return
     const close = (event: MouseEvent): void => { if (!(event.target as HTMLElement).closest('[data-popover]')) setOpen(null) }
     const key = (event: KeyboardEvent): void => { if (event.key === 'Escape') setOpen(null) }
@@ -89,10 +93,25 @@ export function FilterBar({
   const saveView = async (): Promise<void> => {
     const name = viewName.trim()
     if (!name) return
-    await session.saveFilterView(name, definition)
-    setViewName('')
-    setOpen(null)
-    onToast(`Saved view ${name.slice(0, 80)}`)
+    const existing = session.filterViews.some(view => view.name.toLocaleLowerCase() === name.slice(0, 80).toLocaleLowerCase())
+    try {
+      await session.saveFilterView(name, definition)
+      setViewName('')
+      setOpen(null)
+      onToast(`${existing ? 'View updated' : 'View added'}: ${name.slice(0, 80)}`)
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const changeView = async (operation: () => Promise<void>, message: string): Promise<void> => {
+    try {
+      await operation()
+      setOpen(null)
+      onToast(message)
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : String(error))
+    }
   }
 
   const viewPreview = (view: TaskFilterView): string => {
@@ -154,7 +173,7 @@ export function FilterBar({
       {open === 'priority' ? pop(<><MenuHead>Priority</MenuHead>{(['high', 'normal', 'low'] as TaskPriority[]).map(priority => <MenuItem key={priority} type="button" $on={priorityFilter === priority} onClick={() => { session.setFilters({ ...filters, priority: priorityFilter === priority ? '' : priority } as typeof filters); setOpen(null) }}>{priority[0].toUpperCase() + priority.slice(1)}</MenuItem>)}</>) : null}
       {open === 'lanes' ? pop(<><MenuHead>Swimlanes</MenuHead>{(['none', 'owner', 'label', 'priority'] as Swimlanes[]).map(value => <MenuItem key={value} type="button" $on={swimlanes === value} onClick={() => { onSwimlanes(value); setOpen(null) }}>{value === 'none' ? 'None' : `By ${value}`}</MenuItem>)}</>) : null}
       {open === 'group' ? pop(<><MenuHead>Group by</MenuHead>{(['none', 'owner', 'label', 'priority', 'due'] as GroupBy[]).map(value => <MenuItem key={value} type="button" $on={groupBy === value} onClick={() => { onGroupBy(value); setOpen(null) }}>{value === 'none' ? 'None' : `By ${value}`}</MenuItem>)}</>) : null}
-      {open === 'views' ? pop(<><MenuHead>Saved views</MenuHead>{session.filterViews.length ? session.filterViews.map(view => <div key={view.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', alignItems: 'center', gap: 4, padding: '3px 4px' }}><button type="button" onClick={() => applyView(view)} title={`Open ${view.name}`} style={{ minWidth: 0, padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-ink)', textAlign: 'left', cursor: 'pointer', overflow: 'hidden' }}><span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{view.name}</span><small style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--tasks-muted)' }}>{viewPreview(view)}</small></button><button type="button" onClick={() => { void session.updateFilterView(view.id, view.name, definition); setOpen(null); onToast(`Updated view ${view.name}`) }} aria-label={`Update ${view.name}`} title="Update from current filters" style={{ padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-acc-ink)', cursor: 'pointer', fontSize: 11 }}>Update</button><button type="button" onClick={() => { void session.deleteFilterView(view.id); setOpen(null); onToast(`Removed view ${view.name}`) }} aria-label={`Remove ${view.name}`} title="Remove view" style={{ padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-bad-ink)', cursor: 'pointer', fontSize: 11 }}>Remove</button></div>) : <Meta style={{ padding: '6px 10px' }}>No saved views yet.</Meta>}<Divider /><MenuItem type="button" onClick={() => { setViewName(''); setOpen('saveView') }}>Save current filters as a view</MenuItem></>, 300) : null}
+      {open === 'views' ? pop(<><MenuHead>Saved views</MenuHead>{session.filterViews.length ? session.filterViews.map(view => <div key={view.id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', alignItems: 'center', gap: 4, padding: '3px 4px' }}><button type="button" onClick={() => applyView(view)} title={`Open ${view.name}`} style={{ minWidth: 0, padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-ink)', textAlign: 'left', cursor: 'pointer', overflow: 'hidden' }}><span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{view.name}</span><small style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--tasks-muted)' }}>{viewPreview(view)}</small></button><button type="button" onClick={() => void changeView(() => session.updateFilterView(view.id, view.name, definition), `Updated view ${view.name}`)} aria-label={`Update ${view.name}`} title="Update from current filters" style={{ padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-acc-ink)', cursor: 'pointer', fontSize: 11 }}>Update</button><button type="button" onClick={() => void changeView(() => session.deleteFilterView(view.id), `Removed view ${view.name}`)} aria-label={`Remove ${view.name}`} title="Remove view" style={{ padding: '5px 6px', border: 0, borderRadius: 7, background: 'transparent', color: 'var(--tasks-bad-ink)', cursor: 'pointer', fontSize: 11 }}>Remove</button></div>) : <Meta style={{ padding: '6px 10px' }}>No saved views yet.</Meta>}<Divider /><MenuItem type="button" onClick={() => { setViewName(''); setOpen('saveView') }}>Save current filters as a view</MenuItem></>, 300) : null}
       {open === 'saveView' ? pop(<><MenuHead>Save named view</MenuHead><label style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '4px 10px 8px', fontSize: 12, color: 'var(--tasks-muted)' }}><span>Name</span><input autoFocus aria-label="View name" value={viewName} maxLength={80} placeholder="e.g. Maya's review" onChange={event => setViewName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void saveView() } }} style={{ boxSizing: 'border-box', width: '100%', height: 30, padding: '0 8px', border: '1px solid var(--tasks-line)', borderRadius: 7, background: 'var(--tasks-card)', color: 'var(--tasks-ink)', font: 'inherit' }} /></label><Meta style={{ padding: '0 10px 8px' }}>Owner, status and label filters are saved.</Meta><MenuItem type="button" $tone="accent" disabled={!viewName.trim()} onClick={() => void saveView()}>Save view</MenuItem></>, 280) : null}
     </FilterRow>
   )

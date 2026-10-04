@@ -26,6 +26,8 @@ interface PureTasksShellProps {
   board: TasksBoardApi
   boards: BoardIndexEntry[]
   boardsLoading: boolean
+  boardsError?: string | null
+  onRetryBoards?: () => Promise<void>
   settings: TasksAppSettings
   /** Open another board; with a task id, open that card once it is loaded. */
   onOpenBoard: (path: string, taskId?: string) => void
@@ -34,7 +36,7 @@ interface PureTasksShellProps {
   initialOpenTaskId?: string | null
 }
 
-export function PureTasksShell({ session, board, boards, boardsLoading, settings, onOpenBoard, onNewBoard, initialOpenTaskId }: PureTasksShellProps): React.ReactElement {
+export function PureTasksShell({ session, board, boards, boardsLoading, boardsError, onRetryBoards, settings, onOpenBoard, onNewBoard, initialOpenTaskId }: PureTasksShellProps): React.ReactElement {
   const [place, setPlaceState] = useState<TasksPlace>(settings.place ?? 'board')
   const [groupBy, setGroupByState] = useState<GroupBy>(settings.groupBy ?? 'none')
   const [swimlanes, setSwimlanesState] = useState<Swimlanes>(settings.swimlanes ?? 'none')
@@ -52,6 +54,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, settings
     if (toastTimer.current) clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), 2600)
   }, [])
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
   const setPlace = useCallback((next: TasksPlace) => { setPlaceState(next); setPeek(null); setSelection(new Set()); void updateTasksSettings({ place: next }).catch(() => undefined) }, [])
 
   useEffect(() => {
@@ -111,13 +114,16 @@ export function PureTasksShell({ session, board, boards, boardsLoading, settings
   })
 
   async function newTask(): Promise<void> {
-    if (place !== 'board') setPlace('board')
-    session.setFilters(DEFAULT_FILTERS)
-    if (session.viewMode !== 'board') session.setViewMode('board')
-    const first = session.columns.find(column => !column.hidden && !column.done)?.id ?? 'inbox'
-    await session.createTask('New task', first)
-    const created = session.readStore().tasks.find(task => task.title === 'New task' && task.status === first)
-    if (created) openTask(created.id)
+    try {
+      if (place !== 'board') setPlace('board')
+      session.setFilters(DEFAULT_FILTERS)
+      if (session.viewMode !== 'board') session.setViewMode('board')
+      const first = session.columns.find(column => !column.hidden && !column.done)?.id ?? 'inbox'
+      const createdId = await session.createTask('New task', first)
+      if (createdId && session.readStore().tasks.some(task => task.id === createdId)) openTask(createdId)
+    } catch (failure) {
+      onToast(failure instanceof Error ? failure.message : String(failure))
+    }
   }
 
   const cross = useMemo(() => crossBoardTasks(boards, board.path).filter(entry => !entry.done), [boards, board.path])
@@ -159,7 +165,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, settings
           ) : null}
           {place === 'myDay' ? <MyDayView session={session} boards={boards} openPath={board.path} chosen={chosenToday} onChoose={chooseForDay} onOpen={openCross} onToast={onToast} /> : null}
           {place === 'upcoming' ? <UpcomingView boards={boards} openPath={board.path} onOpen={openCross} /> : null}
-          {place === 'boards' ? <BoardsHome boards={boards} openPath={board.path} loading={boardsLoading} onOpenBoard={path => { setPlace('board'); onOpenBoard(path) }} onNewBoard={template => { setPlace('board'); onNewBoard(template) }} /> : null}
+          {place === 'boards' ? <BoardsHome boards={boards} openPath={board.path} loading={boardsLoading} error={boardsError} onRetry={onRetryBoards} onOpenBoard={path => { setPlace('board'); onOpenBoard(path) }} onNewBoard={template => { setPlace('board'); onNewBoard(template) }} /> : null}
         </Main>
       </Body>
       {peekTask && peek && !openTaskId ? <TaskPeek session={session} task={peekTask} anchor={peek.rect} onClose={() => setPeek(null)} onOpen={() => openTask(peekTask.id)} onToast={onToast} /> : null}

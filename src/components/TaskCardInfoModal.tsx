@@ -820,6 +820,7 @@ export function TaskResourceLinksEditor({
             <Button
               size="sm"
               disabled={!link.path}
+              type="button"
               onClick={() => void session.openLink(link)}
             >
               Open
@@ -827,6 +828,7 @@ export function TaskResourceLinksEditor({
             <Button
               size="sm"
               variant="danger"
+              type="button"
               onClick={() => void session.removeLink(task.id, link.id)}
             >
               Remove
@@ -834,7 +836,7 @@ export function TaskResourceLinksEditor({
           </LinkRow>
         ))
       )}
-      <InlineForm>
+      <InlineForm as="div">
         <SelectField
           value={linkType}
           options={LINK_TYPE_OPTIONS}
@@ -848,7 +850,7 @@ export function TaskResourceLinksEditor({
           placeholder="Link title"
         />
       </InlineForm>
-      <InlineForm>
+      <InlineForm as="div">
         <TextField
           value={linkPath}
           onChange={event => setLinkPath(event.target.value)}

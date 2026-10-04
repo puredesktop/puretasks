@@ -132,6 +132,8 @@ export function usePureTasksAgentTools(
         addTaskResourceLinkHandler(contextRef.current, invoke),
       removeTaskResourceLink: invoke =>
         removeTaskResourceLinkHandler(contextRef.current, invoke),
+      createMissionFromTask: invoke =>
+        createMissionFromTaskHandler(contextRef.current, invoke),
       applyTaskBoardPatch: invoke =>
         applyTaskBoardPatchHandler(contextRef.current, invoke),
     },
