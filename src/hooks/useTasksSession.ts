@@ -6,6 +6,7 @@ import {
   archiveDoneTasks,
   columnAtLimit,
   createActivity,
+  createId,
   createTask,
   createTaskColumn,
   labelsForProject,
@@ -19,6 +20,8 @@ import {
 } from '../lib/taskModel'
 import type {
   SuiteTask,
+  TaskFilterDefinition,
+  TaskFilterView,
   TaskFilters,
   TaskPriority,
   TaskProject,
@@ -56,11 +59,15 @@ export interface TasksSessionState {
   hiddenColumns: TaskColumn[]
   visibleTasks: SuiteTask[]
   labels: string[]
+  filterViews: TaskFilterView[]
   filters: TaskFilters
   viewMode: TaskViewMode
   setSelectedTask: (taskId: string | null) => void
   setViewMode: (mode: TaskViewMode) => void
   setFilters: (filters: TaskFilters) => void
+  saveFilterView: (name: string, filters: TaskFilterDefinition) => Promise<void>
+  updateFilterView: (viewId: string, name: string, filters: TaskFilterDefinition) => Promise<void>
+  deleteFilterView: (viewId: string) => Promise<void>
   /** Rename the board's project (the naming surface). */
   renameActiveProject: (name: string) => void
   setActiveProjectDescription: (description: string) => void
@@ -291,6 +298,66 @@ export function useTasksSession({
       void persistSettings({ filters: next })
     },
     [persistSettings],
+  )
+
+  const saveFilterView = useCallback(
+    async (name: string, definition: TaskFilterDefinition) => {
+      const cleanName = name.trim().slice(0, 80)
+      if (!cleanName) return
+      const cleanFilters: TaskFilterDefinition = {
+        owner: definition.owner.trim(),
+        status: definition.status,
+        label: definition.label.trim(),
+      }
+      const now = nowIso()
+      await applyStoreUpdate(current => {
+        const views = current.filterViews ?? []
+        const existing = views.find(view => view.name.toLocaleLowerCase() === cleanName.toLocaleLowerCase())
+        if (existing) {
+          return {
+            ...current,
+            filterViews: views.map(view => view.id === existing.id ? { ...view, name: cleanName, filters: cleanFilters, updatedAt: now } : view),
+          }
+        }
+        return {
+          ...current,
+          filterViews: [{ id: createId('filter-view'), name: cleanName, filters: cleanFilters, createdAt: now, updatedAt: now }, ...views],
+        }
+      })
+    },
+    [applyStoreUpdate],
+  )
+
+  const updateFilterView = useCallback(
+    async (viewId: string, name: string, definition: TaskFilterDefinition) => {
+      const cleanName = name.trim().slice(0, 80)
+      if (!cleanName) return
+      const cleanFilters: TaskFilterDefinition = {
+        owner: definition.owner.trim(),
+        status: definition.status,
+        label: definition.label.trim(),
+      }
+      await applyStoreUpdate(current => {
+        const views = current.filterViews ?? []
+        if (!views.some(view => view.id === viewId)) return current
+        return {
+          ...current,
+          filterViews: views.map(view => view.id === viewId ? { ...view, name: cleanName, filters: cleanFilters, updatedAt: nowIso() } : view),
+        }
+      })
+    },
+    [applyStoreUpdate],
+  )
+
+  const deleteFilterView = useCallback(
+    async (viewId: string) => {
+      await applyStoreUpdate(current => {
+        const views = current.filterViews ?? []
+        if (!views.some(view => view.id === viewId)) return current
+        return { ...current, filterViews: views.filter(view => view.id !== viewId) }
+      })
+    },
+    [applyStoreUpdate],
   )
 
   const createTaskAction = useCallback(
@@ -765,11 +832,15 @@ export function useTasksSession({
     hiddenColumns,
     visibleTasks,
     labels,
+    filterViews: store.filterViews ?? [],
     filters,
     viewMode,
     setSelectedTask,
     setViewMode,
     setFilters,
+    saveFilterView,
+    updateFilterView,
+    deleteFilterView,
     renameActiveProject,
     setActiveProjectDescription,
     replaceStore,

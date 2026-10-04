@@ -6,7 +6,9 @@ import type {
   TaskChecklistItem,
   TaskColumn,
   TaskComment,
+  TaskFilterDefinition,
   TaskFilters,
+  TaskFilterView,
   TaskLinkType,
   TaskPriority,
   TaskProject,
@@ -35,7 +37,11 @@ export const DEFAULT_FILTERS: TaskFilters = {
   query: '',
   status: 'all',
   label: '',
+  owner: '',
 }
+
+/** Sentinel used by the owner filter for tasks without an assigned owner. */
+export const UNASSIGNED_OWNER_FILTER = '__none__'
 
 export function createId(prefix: string): string {
   const cryptoId =
@@ -61,6 +67,7 @@ export function starterBoardStore(
     columns: cloneDefaultTaskColumns(),
     tasks: [],
     activity: [],
+    filterViews: [],
   }
 }
 
@@ -146,6 +153,7 @@ export function normalizeTasksStore(
   const activity = Array.isArray(candidate.activity)
     ? candidate.activity.filter(isActivity)
     : []
+  const filterViews = normalizeTaskFilterViews(candidate.filterViews)
   if (projects.length === 0) {
     const fallback = createProject(DEFAULT_PROJECT_NAME, '', now)
     return {
@@ -154,6 +162,7 @@ export function normalizeTasksStore(
       columns,
       tasks: tasks.map(task => ({ ...task, projectId: fallback.id })),
       activity,
+      filterViews,
     }
   }
   const projectIds = new Set(projects.map(project => project.id))
@@ -163,7 +172,39 @@ export function normalizeTasksStore(
     columns,
     tasks: tasks.filter(task => projectIds.has(task.projectId)),
     activity,
+    filterViews,
   }
+}
+
+export function normalizeTaskFilterViews(value: unknown): TaskFilterView[] {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object') return []
+    const candidate = item as Partial<TaskFilterView>
+    const filters = candidate.filters
+    if (
+      typeof candidate.id !== 'string' || !candidate.id.trim() || seen.has(candidate.id) ||
+      typeof candidate.name !== 'string' || !candidate.name.trim() ||
+      !filters || typeof filters !== 'object' ||
+      typeof filters.status !== 'string' || typeof filters.label !== 'string' ||
+      typeof filters.owner !== 'string'
+    ) return []
+    seen.add(candidate.id)
+    const createdAt = typeof candidate.createdAt === 'string' ? candidate.createdAt : new Date().toISOString()
+    const updatedAt = typeof candidate.updatedAt === 'string' ? candidate.updatedAt : createdAt
+    return [{
+      id: candidate.id,
+      name: candidate.name.trim().slice(0, 80),
+      filters: {
+        owner: filters.owner.trim(),
+        status: filters.status as TaskFilterDefinition['status'],
+        label: filters.label.trim(),
+      },
+      createdAt,
+      updatedAt,
+    }]
+  })
 }
 
 export function cloneDefaultTaskColumns(): TaskColumn[] {
@@ -479,6 +520,7 @@ export function visibleTasksForProject(
 ): SuiteTask[] {
   const query = filters.query.trim().toLowerCase()
   const label = filters.label.trim().toLowerCase()
+  const owner = (filters.owner ?? '').trim().toLowerCase()
   return store.tasks
     .filter(task => task.projectId === projectId && !task.archivedAt)
     .filter(task => filters.status === 'all' || task.status === filters.status)
@@ -487,6 +529,11 @@ export function visibleTasksForProject(
         ? task.labels.some(candidate => candidate.toLowerCase() === label)
         : true,
     )
+    .filter(task => {
+      if (!owner) return true
+      if (owner === UNASSIGNED_OWNER_FILTER) return !task.ownerName?.trim()
+      return task.ownerName?.trim().toLowerCase() === owner
+    })
     .filter(task => {
       const due = filters.due ?? ''
       if (!due) return true
