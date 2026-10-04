@@ -142,8 +142,9 @@ function ReadyTasksApp({
   )
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const [openError, setOpenError] = useState<string | null>(null)
-  /** A card to open once the board it lives on has loaded. */
-  const pendingTaskRef = useRef<string | null>(null)
+  const [openTaskRequest, setOpenTaskRequest] = useState<{ taskId: string; at: number } | null>(null)
+  const taskRequestSequence = useRef(0)
+  const [boardViewRevision, setBoardViewRevision] = useState(0)
 
   const lifecycle = useDocumentLifecycle({
     appSlug: TASKS_APP_SLUG,
@@ -206,10 +207,19 @@ function ReadyTasksApp({
   }, [])
 
   const openBoard = useCallback(
-    async (packagePath: string): Promise<void> => {
+    async (packagePath: string, taskId?: string): Promise<void> => {
       const clean = packagePath.replace(/\/+$/, '')
+      const revealTask = () => {
+        if (taskId && sessionRef.current.readStore().tasks.some(task => task.id === taskId)) {
+          sessionRef.current.setSelectedTask(taskId)
+          setOpenTaskRequest({ taskId, at: ++taskRequestSequence.current })
+        } else setOpenTaskRequest(null)
+      }
       if (boundPathRef.current === clean) {
+        // Returning to the bound board also supersedes an in-flight foreign open.
+        openGeneration.current += 1
         setSwitcherOpen(false)
+        revealTask()
         return
       }
       const generation = ++openGeneration.current
@@ -235,22 +245,17 @@ function ReadyTasksApp({
       lastResourceRef.current = clean
       setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME)
       sessionRef.current.replaceStore(boardStore)
+      setBoardViewRevision(value => value + 1)
       lifecycle.adopt(clean)
       setSwitcherOpen(false)
       void updateTasksSettings({ lastBoardPath: clean }).catch(() => undefined)
-      if (pendingTaskRef.current) {
-        const taskId = pendingTaskRef.current
-        pendingTaskRef.current = null
-        sessionRef.current.setSelectedTask(taskId)
-        setOpenTaskRequest({ taskId, at: Date.now() })
-      }
+      revealTask()
     },
     [readBoard],
   )
-  const [openTaskRequest, setOpenTaskRequest] = useState<{ taskId: string; at: number } | null>(null)
   const openBoardWithTask = useCallback((path: string, taskId?: string) => {
-    pendingTaskRef.current = taskId ?? null
-    void openBoard(path).catch(() => { pendingTaskRef.current = null })
+    // The requested card belongs to this open, never to another pending read.
+    void openBoard(path, taskId).catch(() => undefined)
   }, [openBoard])
 
   // Re-read the bound package after an external write, keeping selection.
@@ -291,6 +296,7 @@ function ReadyTasksApp({
     boundPathRef.current = null
     lastResourceRef.current = null
     setOpenError(null)
+    setOpenTaskRequest(null)
     // Commit the name synchronously: the lifecycle names the lazily-created
     // draft from the last *rendered* suggestedTitle, so a deferred render
     // would file this board under the previous board's name.
@@ -298,6 +304,7 @@ function ReadyTasksApp({
       setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME),
     )
     sessionRef.current.replaceStore(boardStore)
+    setBoardViewRevision(value => value + 1)
     lifecycle.reset()
     setSwitcherOpen(false)
   }, [])
@@ -421,8 +428,6 @@ function ReadyTasksApp({
 
   // Every board on this Mac, for the rail and the cross-board places.
   const boardsIndex = useBoardsIndex({ readBoard, openPath: lifecycle.doc.path, openStore: session.store, enabled: !isStandaloneDevMode() })
-  const refreshBoards = boardsIndex.refresh
-  useEffect(() => { void refreshBoards() }, [lifecycle.doc.path, lifecycle.doc.savedAt, refreshBoards])
 
   // Board operations for the drawer tools — the same callbacks the header
   // and the document switcher use, so a tool can never bypass the lifecycle.
@@ -496,11 +501,13 @@ function ReadyTasksApp({
       }
     >
       <PureTasksShell
-        key={openTaskRequest ? `${openTaskRequest.taskId}:${openTaskRequest.at}` : 'shell'}
+        key={`${boardViewRevision}:${openTaskRequest?.at ?? 0}`}
         session={session}
         board={board}
         boards={boardsIndex.boards}
         boardsLoading={boardsIndex.loading}
+        boardsError={boardsIndex.error}
+        onRetryBoards={boardsIndex.refresh}
         settings={openTaskRequest ? { ...settings, place: 'board', selectedTaskId: openTaskRequest.taskId } : settings}
         onOpenBoard={openBoardWithTask}
         onNewBoard={template => void newBoard(undefined, template).catch(() => undefined)}

@@ -12,10 +12,12 @@ export const BOARD_TEMPLATES: ReadonlyArray<{ id: string; label: string; detail:
 ]
 
 /** Every board on this Mac as a glass card with its numbers, and the templates a new one starts from. */
-export function BoardsHome({ boards, openPath, loading, onOpenBoard, onNewBoard }: {
+export function BoardsHome({ boards, openPath, loading, error, onRetry, onOpenBoard, onNewBoard }: {
   boards: BoardIndexEntry[]
   openPath: string | null
   loading: boolean
+  error?: string | null
+  onRetry?: () => Promise<void>
   onOpenBoard: (path: string) => void
   onNewBoard: (template: (typeof BOARD_TEMPLATES)[number]) => void
 }): React.ReactElement {
@@ -28,8 +30,9 @@ export function BoardsHome({ boards, openPath, loading, onOpenBoard, onNewBoard 
   }, { open: 0, done: 0 })
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, flex: 1, minHeight: 0, overflow: 'auto', paddingRight: 8, paddingBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}><div><Kicker>Every .tasks board on this Mac</Kicker><PlaceTitle>Boards</PlaceTitle></div><span style={{ flex: 1 }} /><Meta>{boards.length} board{boards.length === 1 ? '' : 's'} · {totals.open} open · {totals.done} done this week{loading ? ' · reading…' : ''}</Meta></div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}><div><Kicker>Every .tasks board on this Mac</Kicker><PlaceTitle>Boards</PlaceTitle></div><span style={{ flex: 1 }} /><Meta>{boards.length} board{boards.length === 1 ? '' : 's'} · {totals.open} open · {totals.done} done this week{loading ? ' · reading…' : ''}</Meta></div>
+      {error ? <div role="alert" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', overflowWrap: 'anywhere', gap: 10 }}><Meta>Could not refresh boards: {error}</Meta>{onRetry ? <Pill type="button" disabled={loading} onClick={() => void onRetry()}>Retry</Pill> : null}</div> : null}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: 14 }}>
         {boards.map(board => {
           const store = board.store
           const doneIds = new Set((store?.columns ?? []).filter(column => column.done).map(column => column.id))
