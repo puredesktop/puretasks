@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "lucide-react": "^0.525.0",
     "@purescience/platform-ui": "file:../../packages/ui",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -17,10 +18,13 @@
     "@purescience/platform-bridge": "file:../../packages/bridge"
   },
   "devDependencies": {
-    "@swc/plugin-styled-components": "^12.9.0",
+    "@swc/core": "1.16.1",
+    "@swc/plugin-styled-components": "13.0.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@vitejs/plugin-react-swc": "^3.10.2",
+    "happy-dom": "^20.14.5",
+    "typescript": "^5.8.3",
     "vite": "^6.3.5",
     "vitest": "^3.2.4"
   },

@@ -70,6 +70,7 @@ export const TopBar = styled.div`
   background: var(--tasks-panel);
   backdrop-filter: var(--tasks-blur);
   -webkit-backdrop-filter: var(--tasks-blur);
+  @media (max-width: 1000px) { flex-wrap: wrap; height: auto; min-height: 48px; padding: 8px 14px; }
 `
 
 export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: boolean }>`
@@ -102,6 +103,9 @@ export const ViewTabs = styled.div`
   border-radius: 10px;
   background: color-mix(in srgb, var(--tasks-ink) 6%, transparent);
   box-shadow: inset 0 0 0 1px var(--tasks-line);
+  max-width: 100%;
+  flex-shrink: 0;
+  overflow-x: auto;
 `
 
 export const ViewTab = styled.button<{ $on?: boolean }>`
@@ -147,6 +151,7 @@ export const Body = styled.div`
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
+  @media (max-width: 600px) { flex-direction: column; }
 `
 
 export const Rail = styled.nav`
@@ -160,6 +165,13 @@ export const Rail = styled.nav`
   overflow: auto;
   /* A hairline between the pane and the board. */
   border-right: 1px solid var(--tasks-edge);
+  @media (max-width: 600px) {
+    flex-direction: row;
+    width: 100%;
+    padding: 6px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--tasks-edge);
+  }
 `
 
 export const RailRow = styled.button<{ $on?: boolean }>`
@@ -180,6 +192,7 @@ export const RailRow = styled.button<{ $on?: boolean }>`
   &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
   span.name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   small { font-family: var(--tasks-mono); font-size: 10.5px; color: var(--tasks-faint); }
+  @media (max-width: 600px) { flex-shrink: 0; max-width: 180px; }
 `
 
 export const RailDot = styled.span<{ $color?: string }>`
@@ -197,6 +210,7 @@ export const RailGroup = styled.div`
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--tasks-faint);
+  @media (max-width: 600px) { display: none; }
 `
 
 export const Main = styled.main`
@@ -628,6 +642,12 @@ export const OverlayTop = styled.div`
   font-size: 11px;
   color: var(--tasks-muted);
   .hint { margin-left: auto; font-size: 10.5px; color: var(--tasks-faint); }
+  @media (max-width: 600px) {
+    flex-wrap: wrap;
+    padding: 10px 12px 0;
+    .hint { display: none; }
+    > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  }
 `
 
 export const OverlayGrid = styled.div`
@@ -635,7 +655,12 @@ export const OverlayGrid = styled.div`
   grid-template-columns: minmax(0, 1fr) 300px;
   flex: 1 1 auto;
   min-height: 0;
-  @media (max-width: 900px) { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 900px) {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+    > div, > aside { overflow: visible; }
+    > aside { border-left: 0; border-top: 1px solid var(--tasks-edge); }
+  }
 `
 
 export const OverlayMain = styled.div`
