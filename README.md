@@ -67,6 +67,7 @@ Follow the [development guide](docs/development.md) for Claude Code/Codex comman
 | --- | --- |
 | [App guide](docs/app-guide.md) | App overview, source layout, and usage. |
 | [Development guide](docs/development.md) | External coding tools, purefactory, checks, and installation. |
+| [Reliability audit](docs/audit-reliability.md) | Board navigation, mission ownership, bounded reads, checks and integration limits. |
 | [Agent guide](agents.md) | App-specific agent workflows and constraints. |
 | [Agent contribution skill](.agents/skills/contribute-puretasks/SKILL.md) | Clone or fork, implement and check changes, open PRs, create issues, and comment. |
 

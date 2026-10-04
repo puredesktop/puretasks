@@ -31,6 +31,7 @@ import type {
   TasksStore,
 } from '../types'
 import { useEffect } from 'react'
+import { mapConcurrent } from '../lib/mapConcurrent'
 
 interface UseTasksSessionOptions {
   initialStore: TasksStore
@@ -78,7 +79,7 @@ export interface TasksSessionState {
   applyStoreUpdate: (
     producer: (current: TasksStore) => TasksStore,
   ) => Promise<TasksStore>
-  createTask: (title: string, status?: TaskStatus) => Promise<void>
+  createTask: (title: string, status?: TaskStatus) => Promise<string | null>
   createColumn: (label: string) => Promise<void>
   renameColumn: (status: TaskStatus, label: string) => Promise<void>
   reorderColumn: (
@@ -157,6 +158,15 @@ export function useTasksSession({
   // updates synchronously. Producers run against the ref, never against a
   // possibly-stale render or a deferred React updater.
   const storeRef = useRef(initialStore)
+  const boardGeneration = useRef(0)
+  const [boardRevision, setBoardRevision] = useState(0)
+  const mounted = useRef(true)
+  const mutationCallback = useRef(onMutated)
+  mutationCallback.current = onMutated
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; boardGeneration.current += 1 }
+  }, [])
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(
     initialSettings.selectedTaskId ?? null,
   )
@@ -205,14 +215,16 @@ export function useTasksSession({
       if (next === storeRef.current) return next
       storeRef.current = next
       setStore(next)
-      onMutated(next)
+      mutationCallback.current(next)
       return next
     },
-    [onMutated],
+    [],
   )
 
   const replaceStore = useCallback(
     (next: TasksStore, options?: { keepSelection?: boolean }) => {
+      boardGeneration.current += 1
+      setBoardRevision(boardGeneration.current)
       storeRef.current = next
       setStore(next)
       if (!options?.keepSelection) setSelectedTaskId(null)
@@ -284,7 +296,8 @@ export function useTasksSession({
   const createTaskAction = useCallback(
     async (title: string, status: TaskStatus = 'inbox') => {
       const trimmed = title.trim()
-      if (!trimmed) return
+      if (!trimmed) return null
+      const generation = boardGeneration.current
       let createdId: string | null = null
       await applyStoreUpdate(current => {
         const created = createTask(current.projects[0].id, trimmed, status)
@@ -306,7 +319,8 @@ export function useTasksSession({
           activity: [activity, ...current.activity],
         }
       })
-      if (createdId) setSelectedTask(createdId)
+      if (createdId && generation === boardGeneration.current) setSelectedTask(createdId)
+      return createdId
     },
     [applyStoreUpdate, setSelectedTask],
   )
@@ -556,8 +570,12 @@ export function useTasksSession({
       const task = storeRef.current.tasks.find(candidate => candidate.id === taskId)
       if (!task) throw new Error('Unknown task.')
       if (!missionsEnabled) throw new Error('This shell does not offer missions to apps yet.')
+      const generation = boardGeneration.current
       const brief = missionBrief(kind, task, boardPath, taskColumnsForStore(storeRef.current))
       const mission = await createShellMission({ ...brief, autoStart: true })
+      if (!mounted.current || generation !== boardGeneration.current || !storeRef.current.tasks.some(candidate => candidate.id === taskId)) {
+        throw new Error('Mission created, but the original card is no longer open. Find the mission in Missions.')
+      }
       const record = missionRecord(mission.id, brief.title)
       await applyStoreUpdate(current => ({
         ...current,
@@ -576,42 +594,58 @@ export function useTasksSession({
     [applyStoreUpdate, boardPath, missionsEnabled],
   )
 
-  const refreshMissions = useCallback(async () => {
-    if (!missionsEnabled) return
+  const missionPoll = useRef<{ generation: number; promise: Promise<void> } | null>(null)
+  const refreshMissions = useCallback((): Promise<void> => {
+    if (!missionsEnabled || !mounted.current) return Promise.resolve()
+    const generation = boardGeneration.current
+    if (missionPoll.current?.generation === generation) return missionPoll.current.promise
+    const isCurrent = () => mounted.current && generation === boardGeneration.current
     const live = storeRef.current.tasks.flatMap(task => task.missions.filter(missionLive).map(mission => ({ taskId: task.id, mission })))
-    if (!live.length) return
-    const statuses = await Promise.all(live.map(async entry => ({ ...entry, status: await readMissionStatus(entry.mission.id).catch(() => null) })))
-    const changed = statuses.filter(entry => entry.status && entry.status.phase !== entry.mission.phase)
-    if (!changed.length) return
-    const now = nowIso()
-    await applyStoreUpdate(current => ({
-      ...current,
-      tasks: current.tasks.map(task => {
-        const mine = changed.filter(entry => entry.taskId === task.id)
-        if (!mine.length) return task
-        return updateTaskDetails(task, {
-          missions: task.missions.map(mission => {
-            const hit = mine.find(entry => entry.mission.id === mission.id)
-            return hit?.status ? { ...mission, phase: hit.status.phase, checkedAt: now } : mission
-          }),
-        }, now)
-      }),
-      activity: [
-        ...changed.filter(entry => entry.status && ['done', 'failed', 'needsYou'].includes(entry.status.phase)).map(entry => createActivity(entry.taskId, 'mission', `Mission ${entry.status!.phase === 'done' ? 'finished' : entry.status!.phase === 'failed' ? 'failed' : 'needs you'}: ${entry.mission.title}`, now)),
-        ...current.activity,
-      ],
-    }))
+    if (!live.length) return Promise.resolve()
+    const ids = [...new Set(live.map(entry => entry.mission.id))]
+    const promise = (async () => {
+      try {
+        const statuses = await mapConcurrent(ids, async id => ({ id, status: await readMissionStatus(id).catch(() => null) }), isCurrent)
+        if (!isCurrent()) return
+        const byId = new Map(statuses.map(entry => [entry.id, entry.status]))
+        const captured = new Map(live.map(entry => [`${entry.taskId}:${entry.mission.id}`, entry.mission.phase]))
+        const now = nowIso()
+        await applyStoreUpdate(current => {
+          const activity = [] as TasksStore['activity']
+          let changed = false
+          const tasks = current.tasks.map(task => {
+            let taskChanged = false
+            const missions = task.missions.map(mission => {
+              const key = `${task.id}:${mission.id}`
+              const status = byId.get(mission.id)
+              // A tool may have removed/updated the link while the read was in flight.
+              if (!captured.has(key) || captured.get(key) !== mission.phase || !missionLive(mission) || !status || status.phase === mission.phase) return mission
+              changed = taskChanged = true
+              if (['done', 'failed', 'needsYou'].includes(status.phase)) {
+                activity.push(createActivity(task.id, 'mission', `Mission ${status.phase === 'done' ? 'finished' : status.phase === 'failed' ? 'failed' : 'needs you'}: ${mission.title}`, now))
+              }
+              return { ...mission, phase: status.phase, checkedAt: now }
+            })
+            return taskChanged ? updateTaskDetails(task, { missions }, now) : task
+          })
+          return changed ? { ...current, tasks, activity: [...activity, ...current.activity] } : current
+        })
+      } finally {
+        if (missionPoll.current?.generation === generation) missionPoll.current = null
+      }
+    })()
+    missionPoll.current = { generation, promise }
+    return promise
   }, [applyStoreUpdate, missionsEnabled])
 
-  // Live missions are polled while the board is open; the card shows the phase.
+  // Task edits do not restart polling. Only a new board or a changed set of live missions does.
+  const liveMissionKey = [...new Set(store.tasks.flatMap(task => task.missions.filter(missionLive).map(mission => mission.id)))].sort().join('\n')
   useEffect(() => {
-    if (!missionsEnabled) return
-    const hasLive = store.tasks.some(task => task.missions.some(missionLive))
-    if (!hasLive) return
+    if (!missionsEnabled || !liveMissionKey) return
     const timer = setInterval(() => { void refreshMissions() }, 8000)
     void refreshMissions()
     return () => clearInterval(timer)
-  }, [missionsEnabled, refreshMissions, store])
+  }, [missionsEnabled, refreshMissions, liveMissionKey, boardRevision])
 
   const openMission = useCallback(async (missionId: string) => { await openShellMission(missionId) }, [])
 

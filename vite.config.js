@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import { appDevServerFromManifest } from '../../scripts/vite/app-server.mjs'
 
 export default defineConfig({
+  resolve: { dedupe: ['react', 'react-dom', 'styled-components'] },
   plugins: [
     react({
       plugins: [
