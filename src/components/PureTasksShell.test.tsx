@@ -6,21 +6,23 @@ import { starterBoardStore, createTask } from '../lib/taskModel'
 import { deferred } from '../test/deferred'
 import type { TasksSessionState } from '../hooks/useTasksSession'
 import type { TasksBoardApi } from '../App'
+import type { TasksAppSettings } from '../types'
 vi.mock('../hooks/useAppearance', () => ({ useAppearance: () => 'solid' }))
 vi.mock('@purescience/platform-ui/bridge/react/usePlatformDeepLink', () => ({ usePlatformDeepLink: () => undefined }))
-vi.mock('../bridge/platformBridge', () => ({ updateTasksSettings: async () => ({}), catalogOpen: async () => undefined, suggestPeople: async () => [], missionsAvailable: () => false }))
+const updateTasksSettings = vi.hoisted(() => vi.fn(async (_patch: Record<string, unknown>) => ({})))
+vi.mock('../bridge/platformBridge', () => ({ updateTasksSettings, catalogOpen: async () => undefined, suggestPeople: async () => [], missionsAvailable: () => false }))
 const { useTasksSession } = await import('../hooks/useTasksSession')
 const { PureTasksShell } = await import('./PureTasksShell')
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 let root: Root | null = null
 let latest: TasksSessionState
-async function mount(override: Partial<TasksSessionState> = {}, boardsError?: string, retry?: () => Promise<void>) {
+async function mount(override: Partial<TasksSessionState> = {}, boardsError?: string, retry?: () => Promise<void>, settings: TasksAppSettings = {}) {
   const store = starterBoardStore('Fixture')
   store.tasks = [{ ...createTask(store.projects[0].id, 'New task'), notes: 'The older card' }]
   const board: TasksBoardApi = { title: 'Fixture', description: '', status: 'filed', path: '/fixture.tasks', savedLabel: 'Saved', rename: () => {}, setDescription: () => {}, newBoard: () => {}, openSwitcher: () => {} }
   function Probe() {
     latest = useTasksSession({ initialStore: store, initialSettings: {}, boardPath: board.path, onMutated: () => {} })
-    return <PureTasksShell session={{ ...latest, ...override }} board={board} boards={[]} boardsLoading={false} boardsError={boardsError} onRetryBoards={retry} settings={{}} onOpenBoard={() => {}} onNewBoard={() => {}} />
+    return <PureTasksShell session={{ ...latest, ...override }} board={board} boards={[]} boardsLoading={false} boardsError={boardsError} onRetryBoards={retry} settings={settings} onOpenBoard={() => {}} onNewBoard={() => {}} />
   }
   const container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container)
   await act(async () => root!.render(<Probe />))
@@ -75,4 +77,30 @@ it('uses one link form and saves a resource link once', async () => {
   await act(async () => button('Add link').click())
   expect(latest.store.tasks[0].links).toHaveLength(1)
   expect(latest.store.tasks[0].links[0]).toMatchObject({ title: 'Workshop brief', path: '/fixture/brief.writer' })
+})
+it('hides and shows the sidebar and the card details, remembering each', async () => {
+  updateTasksSettings.mockClear()
+  await mount()
+  const toggle = (label: string) => document.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+  expect(document.querySelector('nav#tasks-rail')).not.toBeNull()
+  expect(toggle('Hide sidebar')?.getAttribute('aria-expanded')).toBe('true')
+  await act(async () => toggle('Hide sidebar')!.click())
+  expect(document.querySelector('nav#tasks-rail')).toBeNull()
+  expect(toggle('Show sidebar')?.getAttribute('aria-expanded')).toBe('false')
+  expect(updateTasksSettings).toHaveBeenLastCalledWith({ railOpen: false })
+  await act(async () => toggle('Show sidebar')!.click())
+  expect(document.querySelector('nav#tasks-rail')).not.toBeNull()
+  expect(updateTasksSettings).toHaveBeenLastCalledWith({ railOpen: true })
+
+  await act(async () => button('+ Task').click())
+  expect(document.querySelector('#card-details')).not.toBeNull()
+  await act(async () => toggle('Hide card details')!.click())
+  expect(document.querySelector('#card-details')).toBeNull()
+  expect(toggle('Show card details')?.getAttribute('aria-expanded')).toBe('false')
+  expect(updateTasksSettings).toHaveBeenLastCalledWith({ cardDetailsOpen: false })
+})
+it('starts with the panels the person left closed', async () => {
+  await mount({}, undefined, undefined, { railOpen: false, cardDetailsOpen: false })
+  expect(document.querySelector('nav#tasks-rail')).toBeNull()
+  expect(document.querySelector('button[aria-label="Show sidebar"]')).not.toBeNull()
 })

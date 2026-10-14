@@ -187,6 +187,9 @@ export interface TasksAppSettings {
   myDay?: Record<string, string[]>
   groupBy?: 'none' | 'owner' | 'label' | 'priority' | 'due'
   swimlanes?: 'none' | 'owner' | 'label' | 'priority'
+  /** Side panels the person has put away or brought back; unset means open (closed on a narrow window). */
+  railOpen?: boolean
+  cardDetailsOpen?: boolean
 }
 
 export interface PlatformAppSettingsUpdateRequest {

@@ -21,6 +21,9 @@ import { GlassActivityView } from './glass/GlassActivityView'
 import { GlassCalendarView } from './glass/GlassCalendarView'
 import { GlassTimelineView } from './glass/GlassTimelineView'
 
+/** A narrow window starts with its side panels put away, until the person says otherwise. */
+const narrowWindow = (): boolean => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 760px)').matches
+
 interface PureTasksShellProps {
   session: TasksSessionState
   board: TasksBoardApi
@@ -41,6 +44,8 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
   const [groupBy, setGroupByState] = useState<GroupBy>(settings.groupBy ?? 'none')
   const [swimlanes, setSwimlanesState] = useState<Swimlanes>(settings.swimlanes ?? 'none')
   const [myDay, setMyDayState] = useState<Record<string, string[]>>(settings.myDay ?? {})
+  const [railOpen, setRailOpen] = useState<boolean>(() => settings.railOpen ?? !narrowWindow())
+  const [detailsOpen, setDetailsOpen] = useState<boolean>(() => settings.cardDetailsOpen ?? !narrowWindow())
   const appearance = useAppearance()
   const [openTaskId, setOpenTaskId] = useState<string | null>(initialOpenTaskId ?? null)
   const [peek, setPeek] = useState<{ taskId: string; rect: DOMRect } | null>(null)
@@ -61,6 +66,8 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
     setPeek(null)
   }, [session.viewMode])
   const setGroupBy = useCallback((next: GroupBy) => { setGroupByState(next); void updateTasksSettings({ groupBy: next }).catch(() => undefined) }, [])
+  const toggleRail = useCallback(() => { const next = !railOpen; setRailOpen(next); void updateTasksSettings({ railOpen: next }).catch(() => undefined) }, [railOpen])
+  const toggleDetails = useCallback(() => { const next = !detailsOpen; setDetailsOpen(next); void updateTasksSettings({ cardDetailsOpen: next }).catch(() => undefined) }, [detailsOpen])
   const setSwimlanes = useCallback((next: Swimlanes) => { setSwimlanesState(next); void updateTasksSettings({ swimlanes: next }).catch(() => undefined) }, [])
   const chosenToday = useMemo(() => new Set(myDay[todayKey()] ?? []), [myDay])
   const chooseForDay = useCallback((ref: string, on: boolean) => {
@@ -149,9 +156,9 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
 
   return (
     <GlassShell data-place={place} data-appearance={appearance}>
-      <TasksTopBar session={session} place={place} boardName={board.title} onOpenSwitcher={board.openSwitcher} onNewTask={() => void newTask()} searchRef={searchRef} />
+      <TasksTopBar session={session} place={place} railOpen={railOpen} onToggleRail={toggleRail} boardName={board.title} onOpenSwitcher={board.openSwitcher} onNewTask={() => void newTask()} searchRef={searchRef} />
       <Body onMouseDown={() => { if (peek) setPeek(null) }}>
-        <TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} />
+        {railOpen ? <TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} /> : null}
         <Main>
           {place === 'board' ? (
             <>
@@ -169,7 +176,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
         </Main>
       </Body>
       {peekTask && peek && !openTaskId ? <TaskPeek session={session} task={peekTask} anchor={peek.rect} onClose={() => setPeek(null)} onOpen={() => openTask(peekTask.id)} onToast={onToast} /> : null}
-      {openTask_ ? <TaskCardOverlay session={session} task={openTask_} onClose={closeTask} onOpenTask={openTask} onToast={onToast} inMyDay={openRef ? chosenToday.has(openRef) : false} onToggleMyDay={() => { if (!openRef) { onToast('Save the board first.'); return } const on = !chosenToday.has(openRef); chooseForDay(openRef, on); onToast(on ? 'Added to My day' : 'Taken off My day') }} /> : null}
+      {openTask_ ? <TaskCardOverlay session={session} task={openTask_} detailsOpen={detailsOpen} onToggleDetails={toggleDetails} onClose={closeTask} onOpenTask={openTask} onToast={onToast} inMyDay={openRef ? chosenToday.has(openRef) : false} onToggleMyDay={() => { if (!openRef) { onToast('Save the board first.'); return } const on = !chosenToday.has(openRef); chooseForDay(openRef, on); onToast(on ? 'Added to My day' : 'Taken off My day') }} /> : null}
       {toast ? <Toast role="status">{toast}</Toast> : null}
     </GlassShell>
   )

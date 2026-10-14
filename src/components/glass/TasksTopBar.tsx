@@ -1,7 +1,7 @@
-import { Search } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import type { TaskViewMode, TasksPlace } from '../../types'
-import { Pill, SearchBox, TopBar, ViewTab, ViewTabs } from './glassStyles'
+import { IconBtn, Pill, SearchBox, TopBar, ViewTab, ViewTabs } from './glassStyles'
 
 const VIEWS: Array<{ id: TaskViewMode; label: string }> = [
   { id: 'board', label: 'Board' },
@@ -14,6 +14,8 @@ const VIEWS: Array<{ id: TaskViewMode; label: string }> = [
 export function TasksTopBar({
   session,
   place,
+  railOpen,
+  onToggleRail,
   boardName,
   onOpenSwitcher,
   onNewTask,
@@ -21,6 +23,8 @@ export function TasksTopBar({
 }: {
   session: TasksSessionState
   place: TasksPlace
+  railOpen: boolean
+  onToggleRail: () => void
   boardName: string
   onOpenSwitcher: () => void
   onNewTask: () => void
@@ -30,6 +34,9 @@ export function TasksTopBar({
 
   return (
     <TopBar>
+      <IconBtn type="button" aria-label={railOpen ? 'Hide sidebar' : 'Show sidebar'} title={railOpen ? 'Hide sidebar' : 'Show sidebar'} aria-expanded={railOpen} aria-controls={railOpen ? 'tasks-rail' : undefined} onClick={onToggleRail} style={{ width: 28, height: 28, flexShrink: 0 }}>
+        {railOpen ? <PanelLeftClose size={16} strokeWidth={2} /> : <PanelLeftOpen size={16} strokeWidth={2} />}
+      </IconBtn>
       {onBoard ? (
         <>
           <Pill type="button" onClick={onOpenSwitcher} style={{ fontWeight: 600 }} title="Open another board">{boardName} <span style={{ color: 'var(--tasks-faint)' }}>▾</span></Pill>

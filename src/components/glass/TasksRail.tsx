@@ -19,7 +19,7 @@ export function TasksRail({
   onOpenBoard: (path: string) => void
 }): React.ReactElement {
   return (
-    <Rail aria-label="Boards and places">
+    <Rail id="tasks-rail" aria-label="Boards and places">
       <RailRow type="button" $on={place === 'myDay'} onClick={() => onPlace('myDay')}><RailDot /><span className="name">My day</span><small>{counts.myDay}</small></RailRow>
       <RailRow type="button" $on={place === 'upcoming'} onClick={() => onPlace('upcoming')}><RailDot $color="var(--pure-attention)" /><span className="name">Upcoming</span><small>{counts.upcoming}</small></RailRow>
       <RailGroup>Boards</RailGroup>

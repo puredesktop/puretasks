@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, X } from 'lucide-react'
+import { Check, PanelRightClose, PanelRightOpen, X } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { MISSION_KINDS, MISSION_PHASE_LABEL, missionLive, type MissionKind } from '../../lib/missions'
 import { blocks, checklistProgress, isBlocked, openBlockers, subtasksOf, TASK_REPEATS } from '../../lib/taskModel'
@@ -11,9 +11,12 @@ import { ownerInitials } from '../puretasksFormat'
 import { OwnerPicker } from './OwnerPicker'
 
 /** The card, whole: status, description, checklist, subtasks, comments; owner, priority, due, repeat, estimate, labels, dependencies, links, missions. */
-export function TaskCardOverlay({ session, task, onClose, onOpenTask, onToast, onToggleMyDay, inMyDay }: {
+export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDetails, onClose, onOpenTask, onToast, onToggleMyDay, inMyDay }: {
   session: TasksSessionState
   task: SuiteTask
+  /** The card's side column (owner, due, labels, missions…); hiding it gives the description the room. */
+  detailsOpen?: boolean
+  onToggleDetails?: () => void
   onClose: () => void
   onOpenTask: (taskId: string) => void
   onToast: (text: string) => void
@@ -80,9 +83,10 @@ export function TaskCardOverlay({ session, task, onClose, onOpenTask, onToast, o
           <span>{session.activeProject.name} › {session.columns.find(column => column.id === task.status)?.label ?? task.status}{parent ? ` › ${parent.title}` : ''}</span>
           <span className="hint">D done · ← → move · T my day · Esc close</span>
           <Pill type="button" $quiet style={{ height: 26 }} onClick={() => { void session.updateTask(task.id, { archivedAt: new Date().toISOString() }); onClose() }}>Archive</Pill>
+          {onToggleDetails ? <IconBtn type="button" aria-label={detailsOpen ? 'Hide card details' : 'Show card details'} title={detailsOpen ? 'Hide card details' : 'Show card details'} aria-expanded={detailsOpen} aria-controls={detailsOpen ? 'card-details' : undefined} onClick={onToggleDetails}>{detailsOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}</IconBtn> : null}
           <IconBtn type="button" aria-label="Close card" onClick={onClose}><X size={15} strokeWidth={2} /></IconBtn>
         </OverlayTop>
-        <OverlayGrid>
+        <OverlayGrid data-details={detailsOpen ? 'open' : 'hidden'}>
           <OverlayMain>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
               <DoneRing type="button" $done={done} aria-label={done ? 'Mark not done' : 'Mark done'} title={done ? 'Mark not done' : 'Mark done'} onClick={() => void toggleDone()}>{done ? <Check size={14} strokeWidth={3} /> : null}</DoneRing>
@@ -132,7 +136,7 @@ export function TaskCardOverlay({ session, task, onClose, onOpenTask, onToast, o
               <TaskConversationPanel task={task} session={session} />
             </div>
           </OverlayMain>
-          <OverlaySide>
+          {detailsOpen ? <OverlaySide id="card-details" aria-label="Card details">
             <Field><b>Owner</b><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>{owner.trim() ? <Avatar $hue={hueOf(owner)} $size={22}>{ownerInitials(owner)}</Avatar> : null}<OwnerPicker value={owner} onChange={setOwner} onCommit={saveOwner} /></span></Field>
             <Field><b>Priority</b><FieldSelect aria-label="Priority" value={task.priority} onChange={event => void session.updateTask(task.id, { priority: event.target.value as TaskPriority })}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></FieldSelect></Field>
             <Field><b>Due</b><span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><FieldInput aria-label="Due date" type="date" value={task.dueAt?.slice(0, 10) ?? ''} onChange={event => void session.updateTask(task.id, { dueAt: event.target.value })} style={{ width: 'auto' }} />{task.dueAt ? <span style={{ fontSize: 11.5, color: 'var(--tasks-muted)', whiteSpace: 'nowrap' }}>{dueWords(task.dueAt)}</span> : null}</span></Field>
@@ -153,7 +157,7 @@ export function TaskCardOverlay({ session, task, onClose, onOpenTask, onToast, o
             </span></Field>
             <Field data-stack="true"><b>My day</b><span><Pill type="button" $on={inMyDay} onClick={onToggleMyDay} style={{ alignSelf: 'flex-start' }}>{inMyDay ? 'In My day · remove' : 'Add to My day'} <kbd>T</kbd></Pill></span></Field>
             <div style={{ marginTop: 'auto', paddingTop: 10, fontSize: 11, color: 'var(--tasks-faint)', lineHeight: 1.5 }}>Created {new Date(task.createdAt).toLocaleDateString()} · updated {new Date(task.updatedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · <button type="button" onClick={() => { void session.deleteTask(task.id); onClose() }} style={{ padding: 0, border: 0, background: 'none', font: 'inherit', color: 'var(--tasks-bad-ink)', cursor: 'pointer' }}>Delete…</button></div>
-          </OverlaySide>
+          </OverlaySide> : null}
         </OverlayGrid>
         {menu ? (
           <Popover role="menu" aria-label={menu.kind === 'mission' ? 'Create mission' : 'Waits on'} style={{ left: Math.min(menu.rect.left, window.innerWidth - 300), top: menu.rect.bottom + 6, width: 290, maxHeight: 320, overflow: 'auto' }} onMouseDown={event => event.stopPropagation()}>

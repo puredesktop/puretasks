@@ -655,6 +655,8 @@ export const OverlayGrid = styled.div`
   grid-template-columns: minmax(0, 1fr) 300px;
   flex: 1 1 auto;
   min-height: 0;
+  /* Card details put away: the description and checklist take the width. */
+  &[data-details='hidden'] { grid-template-columns: minmax(0, 1fr); }
   @media (max-width: 900px) {
     grid-template-columns: minmax(0, 1fr);
     overflow: auto;
