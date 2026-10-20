@@ -160,7 +160,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
       <TasksTopBar session={session} place={place} railOpen={railOpen} onToggleRail={toggleRail} boardName={board.title} onOpenSwitcher={board.openSwitcher} onNewTask={() => void newTask()} searchRef={searchRef} />
       <Body onMouseDown={() => { if (peek) setPeek(null) }}>
         {railOpen ? <TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} /> : null}
-        <Main {...(place === 'board' ? boardAgentRefs({ path: board.path, projectId: session.activeProject.id, name: board.title }) : {})}>
+        <Main {...(place === 'board' ? boardAgentRefs({ path: board.path, projectId: session.activeProject.id, name: board.title, open: true }) : {})}>
           {place === 'board' ? (
             <>
               <FilterBar session={session} groupBy={groupBy} swimlanes={swimlanes} onGroupBy={setGroupBy} onSwimlanes={setSwimlanes} selection={selection} onClearSelection={() => setSelection(new Set())} onToast={onToast} summary={summary} />

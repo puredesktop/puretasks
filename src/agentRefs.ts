@@ -28,14 +28,18 @@ export function columnAgentRefs(column: { id: string; label: string }): AgentRef
   return attributes([`status:${id}`, `beforeStatus:${id}`, `targetStatus:${id}`, `id:${id}`], column.label)
 }
 
-/** A board (a `.tasks` package): its path as openTaskProject / deleteTaskProject take it, and the open board's project id. */
-export function boardAgentRefs(board: { path?: string | null; projectId?: string | null; name: string }): AgentRefAttributes {
+/**
+ * A board (a `.tasks` package): its path as openTaskProject / deleteTaskProject take it, and the open board's project id.
+ * `open` marks the board surface as the open document (`@open`), where a write that names no element lands.
+ */
+export function boardAgentRefs(board: { path?: string | null; projectId?: string | null; name: string; open?: boolean }): AgentRefAttributes {
   const clean = board.path ? board.path.replace(/\/+$/, '') : null
   const paths = clean ? [clean, `${clean}/`] : []
   return attributes([
     ...paths.flatMap(path => [path, `path:${path}`, `storePath:${path}`]),
     board.projectId,
     board.projectId ? `projectId:${board.projectId}` : null,
+    board.open ? '@open' : null,
   ], board.name)
 }
 
