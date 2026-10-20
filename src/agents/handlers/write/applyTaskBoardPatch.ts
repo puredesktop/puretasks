@@ -14,6 +14,7 @@ import {
   optionalString,
   persistAgentMutation,
 } from '../agentArgs'
+import { compactMutationReply } from '../replies'
 
 function readOperations(
   args: Record<string, unknown>,
@@ -43,5 +44,15 @@ export async function applyTaskBoardPatchHandler(
   const result = await persistAgentMutation(context, store =>
     applyTaskBoardPatchAgentMutation(store, input),
   )
-  return { content: formatAgentToolJson(result) }
+  // Each operation reports what it changed; a card is its change summary,
+  // never the whole card with every comment and checklist (getTask has it).
+  return {
+    content: formatAgentToolJson({
+      ...result,
+      applied: result.applied.map(item => ({
+        type: item.type,
+        result: compactMutationReply(item.result),
+      })),
+    }),
+  }
 }

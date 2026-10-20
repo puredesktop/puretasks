@@ -208,6 +208,12 @@ operations with a `dryRun` mode — use it for anything broad. Writes
 are atomic against the live board: two tool calls in one turn compose
 instead of the later one overwriting the earlier one.
 
+Change tools reply with what changed, never the whole board or a whole
+card: `createTask`, `updateTask` (and those operations inside
+`applyTaskBoardPatch`) return the card's id, column, order, fields and
+counts of its comments, checklists and links. Call `getTask` when you
+need the notes text, the comments or the checklist items themselves.
+
 ## Output Style
 
 Return compact results. For reads, answer in prose — the cards that

@@ -16,6 +16,7 @@ import {
   persistAgentMutation,
   requiredString,
 } from '../agentArgs'
+import { compactMutationReply } from '../replies'
 
 export async function updateTaskHandler(
   context: TasksAgentToolContext,
@@ -42,5 +43,5 @@ export async function updateTaskHandler(
       force: optionalBoolean(args, 'force'),
     }),
   )
-  return { content: formatAgentToolJson(result) }
+  return { content: formatAgentToolJson(compactMutationReply(result)) }
 }

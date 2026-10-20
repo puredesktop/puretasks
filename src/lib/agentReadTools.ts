@@ -74,7 +74,7 @@ function resolveFilters(
   }
 }
 
-function toTaskRow(task: SuiteTask): AgentTaskRow {
+export function toTaskRow(task: SuiteTask): AgentTaskRow {
   return {
     id: task.id,
     title: task.title,
