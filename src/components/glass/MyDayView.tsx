@@ -81,7 +81,7 @@ export function MyDayView({ session, boards, openPath, chosen, onChoose, onOpen,
         <div><Kicker>{dateLine}</Kicker><PlaceTitle>My day</PlaceTitle></div>
         <span style={{ flex: 1 }} />
         <Meta>{today.length} for today{hours ? ` · about ${hours} h` : ''}{overdue.length ? ` · ${overdue.length} overdue carried in` : ''}</Meta>
-        {session.missionsEnabled ? <Pill type="button" onClick={() => onToast('Plan my day: pick the cards above, then create a mission from them — the plan lands in your calendar.')}>Plan my day · mission</Pill> : null}
+        {session.missionsEnabled ? <Pill type="button" onClick={() => onToast('Plan my day: pick the cards above, then create an assignment from them — the plan lands in your calendar.')}>Plan my day · assignment</Pill> : null}
       </div>
       {overdue.length ? <SectionRow><h3>Overdue</h3><span>{overdue.length}</span></SectionRow> : null}
       {overdue.map(entry => row(entry, <><Pill type="button" onClick={() => void reschedule(entry, 0)} style={{ height: 26 }}>Today</Pill><Pill type="button" onClick={() => void reschedule(entry, 1)} style={{ height: 26 }}>Tomorrow</Pill></>))}

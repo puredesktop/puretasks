@@ -58,7 +58,7 @@ export function GlassCard({ task, session, selected, picked, picking, dragging, 
       <h4 style={picking || picked ? { paddingRight: 24 } : undefined}>{task.title}</h4>
       <CardMeta><CardChips task={task} store={session.store} done={done} /></CardMeta>
       {progress.total ? <CardMeta style={{ gap: 8 }}><span style={{ fontSize: 11 }}>{progress.done} / {progress.total}</span><Progress $value={(progress.done / progress.total) * 100} /></CardMeta> : null}
-      {live ? <Progress $value={70} $tone="ai" aria-label="Mission running" /> : null}
+      {live ? <Progress $value={70} $tone="ai" aria-label="Assignment running" /> : null}
     </Card>
   )
 }
