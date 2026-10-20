@@ -3,6 +3,7 @@ import { styled } from 'styled-components'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { dueBucket } from '../../lib/taskModel'
 import type { SuiteTask } from '../../types'
+import { taskAgentRefs } from '../../agentRefs'
 import { todayKey } from './MyDayView'
 import { Kicker, Meta, Pill, Tag } from './glassStyles'
 
@@ -80,7 +81,7 @@ export function GlassCalendarView({ session, onOpenTask }: { session: TasksSessi
           return (
             <Day key={key} $muted={date.getMonth() !== cursor.getMonth()} $today={key === today}>
               <b>{date.getDate()}</b>
-              {tasks.slice(0, 4).map(task => <Chip key={task.id} type="button" title={task.title} $done={session.isDoneStatus(task.status)} $over={dueBucket(task) === 'overdue' && !session.isDoneStatus(task.status)} onClick={() => onOpenTask(task.id)}>{task.title}</Chip>)}
+              {tasks.slice(0, 4).map(task => <Chip key={task.id} {...taskAgentRefs(task)} type="button" title={task.title} $done={session.isDoneStatus(task.status)} $over={dueBucket(task) === 'overdue' && !session.isDoneStatus(task.status)} onClick={() => onOpenTask(task.id)}>{task.title}</Chip>)}
               {tasks.length > 4 ? <Meta style={{ fontSize: 11 }}>+{tasks.length - 4} more</Meta> : null}
             </Day>
           )
@@ -89,7 +90,7 @@ export function GlassCalendarView({ session, onOpenTask }: { session: TasksSessi
       {undated.length ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', padding: '6px 0 4px' }}>
           <Kicker>No date</Kicker>
-          {undated.slice(0, 12).map(task => <Tag key={task.id} style={{ cursor: 'pointer', height: 22 }} onClick={() => onOpenTask(task.id)}>{task.title}</Tag>)}
+          {undated.slice(0, 12).map(task => <Tag key={task.id} {...taskAgentRefs(task)} style={{ cursor: 'pointer', height: 22 }} onClick={() => onOpenTask(task.id)}>{task.title}</Tag>)}
           {undated.length > 12 ? <Meta>+{undated.length - 12} more</Meta> : null}
         </div>
       ) : null}

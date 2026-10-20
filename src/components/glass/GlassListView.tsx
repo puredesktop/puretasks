@@ -5,6 +5,7 @@ import { Avatar, Tag, Table } from './glassStyles'
 import { dueTone, dueWords, hueOf, linkWord } from './cardBits'
 import { ownerInitials } from '../puretasksFormat'
 import type { GroupBy } from './FilterBar'
+import { taskAgentRefs } from '../../agentRefs'
 
 /** The list: every visible card as a row, grouped by what you chose, with the same chips as the board. */
 export function GlassListView({ session, groupBy, onOpenTask }: { session: TasksSessionState; groupBy: GroupBy; onOpenTask: (taskId: string) => void }): React.ReactElement {
@@ -46,7 +47,7 @@ function GroupRows({ group, session, onOpenTask }: { group: { id: string; label:
         const done = session.isDoneStatus(task.status)
         const progress = checklistProgress(task)
         return (
-          <tr key={task.id} className="row" onClick={() => onOpenTask(task.id)}>
+          <tr key={task.id} {...taskAgentRefs(task)} className="row" onClick={() => onOpenTask(task.id)}>
             <td className="t" style={done ? { textDecoration: 'line-through', color: 'var(--tasks-muted)' } : undefined}>{task.title}</td>
             <td><Tag $tone={done ? 'ok' : undefined}>{session.columns.find(column => column.id === task.status)?.label ?? task.status}</Tag></td>
             <td>{task.priority === 'high' ? <Tag $tone="pri">High</Tag> : task.priority === 'low' ? <Tag>Low</Tag> : <span style={{ color: 'var(--tasks-muted)' }}>Normal</span>}</td>

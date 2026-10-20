@@ -1,6 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import type { TaskViewMode, TasksPlace } from '../../types'
+import { boardAgentRefs } from '../../agentRefs'
 import { IconBtn, Pill, SearchBox, TopBar, ViewTab, ViewTabs } from './glassStyles'
 
 const VIEWS: Array<{ id: TaskViewMode; label: string }> = [
@@ -39,7 +40,7 @@ export function TasksTopBar({
       </IconBtn>
       {onBoard ? (
         <>
-          <Pill type="button" onClick={onOpenSwitcher} style={{ fontWeight: 600 }} title="Open another board">{boardName} <span style={{ color: 'var(--tasks-faint)' }}>▾</span></Pill>
+          <Pill type="button" {...boardAgentRefs({ projectId: session.activeProject.id, name: boardName })} onClick={onOpenSwitcher} style={{ fontWeight: 600 }} title="Open another board">{boardName} <span style={{ color: 'var(--tasks-faint)' }}>▾</span></Pill>
           <ViewTabs role="tablist" aria-label="Views">
             {VIEWS.map(view => (
               <ViewTab key={view.id} role="tab" type="button" aria-selected={session.viewMode === view.id} $on={session.viewMode === view.id} onClick={() => session.setViewMode(view.id)}>{view.label}</ViewTab>

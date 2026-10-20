@@ -9,6 +9,7 @@ import { dueWords, hueOf, linkWord } from './cardBits'
 import { Avatar, DoneRing, Field, FieldInput, FieldSelect, IconBtn, MenuHead, MenuItem, OverlayBackdrop, OverlayGrid, OverlayMain, OverlayPanel, OverlaySide, OverlayTop, Pill, Popover, Progress, Prose, SectionHead, SectionTitle, Stepper, SubtaskRow, Tag, TitleInput } from './glassStyles'
 import { ownerInitials } from '../puretasksFormat'
 import { OwnerPicker } from './OwnerPicker'
+import { columnAgentRefs, linkAgentRefs, taskAgentRefs } from '../../agentRefs'
 
 /** The card, whole: status, description, checklist, subtasks, comments; owner, priority, due, repeat, estimate, labels, dependencies, links, missions. */
 export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDetails, onClose, onOpenTask, onToast, onToggleMyDay, inMyDay }: {
@@ -78,7 +79,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
 
   return (
     <OverlayBackdrop role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
-      <OverlayPanel role="dialog" aria-modal="true" aria-labelledby="card-overlay-title" onMouseDown={() => { if (menu) setMenu(null) }}>
+      <OverlayPanel {...taskAgentRefs(task)} role="dialog" aria-modal="true" aria-labelledby="card-overlay-title" onMouseDown={() => { if (menu) setMenu(null) }}>
         <OverlayTop>
           <span>{session.activeProject.name} › {session.columns.find(column => column.id === task.status)?.label ?? task.status}{parent ? ` › ${parent.title}` : ''}</span>
           <span className="hint">D done · ← → move · T my day · Esc close</span>
@@ -96,7 +97,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
                 <Stepper style={{ marginTop: 10 }} aria-label="Status">
                   {session.columns.filter(column => !column.hidden).map((column, index, list) => {
                     const current = list.findIndex(candidate => candidate.id === task.status)
-                    return <button key={column.id} type="button" data-on={column.id === task.status} data-past={index < current} onClick={() => void move(column.id)}>{column.label}</button>
+                    return <button key={column.id} {...columnAgentRefs(column)} type="button" data-on={column.id === task.status} data-past={index < current} onClick={() => void move(column.id)}>{column.label}</button>
                   })}
                 </Stepper>
               </div>
@@ -117,7 +118,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
               <SectionHead><SectionTitle>Subtasks</SectionTitle><span style={{ fontFamily: 'var(--tasks-mono)', fontSize: 11, color: 'var(--tasks-muted)' }}>{subtasks.length}</span></SectionHead>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {subtasks.map(subtask => (
-                  <SubtaskRow key={subtask.id} role="button" tabIndex={0} onClick={() => onOpenTask(subtask.id)} onKeyDown={event => { if (event.key === 'Enter') onOpenTask(subtask.id) }}>
+                  <SubtaskRow key={subtask.id} {...taskAgentRefs(subtask)} role="button" tabIndex={0} onClick={() => onOpenTask(subtask.id)} onKeyDown={event => { if (event.key === 'Enter') onOpenTask(subtask.id) }}>
                     {subtask.ownerName ? <Avatar $hue={hueOf(subtask.ownerName)} $size={18}>{ownerInitials(subtask.ownerName)}</Avatar> : null}
                     <span style={session.isDoneStatus(subtask.status) ? { textDecoration: 'line-through', color: 'var(--tasks-muted)' } : undefined}>{subtask.title}</span>
                     <span className="status">{session.columns.find(column => column.id === subtask.status)?.label ?? subtask.status}</span>
@@ -145,12 +146,12 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
             <Field data-stack="true"><b>Estimate</b><span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, flexWrap: 'wrap' }}><FieldInput aria-label="Estimate in hours" type="number" min={0} step={0.25} placeholder="h" value={task.estimateHours ?? ''} onChange={event => void session.updateTask(task.id, { estimateHours: event.target.value === '' ? undefined : Number(event.target.value) })} style={{ width: 64 }} /><span style={{ color: 'var(--tasks-muted)' }}>h ·</span><FieldInput aria-label="Logged hours" type="number" min={0} step={0.25} placeholder="0" value={task.loggedHours ?? ''} onChange={event => void session.updateTask(task.id, { loggedHours: event.target.value === '' ? undefined : Number(event.target.value) })} style={{ width: 56 }} /><span style={{ color: 'var(--tasks-muted)' }}>logged</span></span></Field>
             <Field><b>Labels</b><FieldInput aria-label="Labels, comma separated" placeholder="launch, refs" value={labels} onChange={event => setLabels(event.target.value)} onBlur={saveLabels} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur() }} /></Field>
             <Field data-stack="true"><b>Blocked by</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
-              {task.blockedBy.map(id => { const blocker = store.tasks.find(candidate => candidate.id === id); if (!blocker) return null; const open = blockers.includes(blocker); return <span key={id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Tag $tone={open ? 'blocked' : 'ok'} style={{ cursor: 'pointer', maxWidth: 220 }} onClick={() => onOpenTask(id)} title={blocker.title}>{blocker.title} · {session.columns.find(column => column.id === blocker.status)?.label ?? blocker.status}</Tag><IconBtn type="button" aria-label={`No longer blocked by ${blocker.title}`} onClick={() => void session.updateTask(task.id, { blockedBy: task.blockedBy.filter(candidate => candidate !== id) })} style={{ width: 20, height: 20 }}><X size={12} /></IconBtn></span> })}
+              {task.blockedBy.map(id => { const blocker = store.tasks.find(candidate => candidate.id === id); if (!blocker) return null; const open = blockers.includes(blocker); return <span key={id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Tag {...taskAgentRefs(blocker)} $tone={open ? 'blocked' : 'ok'} style={{ cursor: 'pointer', maxWidth: 220 }} onClick={() => onOpenTask(id)} title={blocker.title}>{blocker.title} · {session.columns.find(column => column.id === blocker.status)?.label ?? blocker.status}</Tag><IconBtn type="button" aria-label={`No longer blocked by ${blocker.title}`} onClick={() => void session.updateTask(task.id, { blockedBy: task.blockedBy.filter(candidate => candidate !== id) })} style={{ width: 20, height: 20 }}><X size={12} /></IconBtn></span> })}
               <button type="button" className="link" style={{ alignSelf: 'flex-start', padding: 0, border: 0, background: 'none', font: '500 12px var(--platform-typography-font-family)', color: 'var(--tasks-acc-ink)', cursor: 'pointer' }} onClick={event => { event.stopPropagation(); setMenu({ kind: 'blockedBy', rect: event.currentTarget.getBoundingClientRect() }) }}>+ Waits on a card…</button>
               {!isBlocked(task, store) && task.blockedBy.length ? <span style={{ fontSize: 11, color: 'var(--tasks-ok-ink)' }}>All clear — nothing open blocks this.</span> : null}
             </span></Field>
-            {blockedCards.length ? <Field data-stack="true"><b>Blocks</b><span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>{blockedCards.map(card => <Tag key={card.id} style={{ cursor: 'pointer' }} onClick={() => onOpenTask(card.id)}>{card.title}</Tag>)}</span></Field> : null}
-            {task.links.filter(link => link.type !== 'mission').length ? <Field data-stack="true"><b>Linked</b><span style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>{task.links.filter(link => link.type !== 'mission').map(link => <Tag key={link.id} $tone="link" style={{ cursor: link.path ? 'pointer' : 'default', justifyContent: 'flex-start' }} onClick={() => void session.openLink(link)} title={link.path ?? link.title}>{linkWord(link)} · {link.title}</Tag>)}</span></Field> : null}
+            {blockedCards.length ? <Field data-stack="true"><b>Blocks</b><span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>{blockedCards.map(card => <Tag key={card.id} {...taskAgentRefs(card)} style={{ cursor: 'pointer' }} onClick={() => onOpenTask(card.id)}>{card.title}</Tag>)}</span></Field> : null}
+            {task.links.filter(link => link.type !== 'mission').length ? <Field data-stack="true"><b>Linked</b><span style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>{task.links.filter(link => link.type !== 'mission').map(link => <Tag key={link.id} {...linkAgentRefs(link)} $tone="link" style={{ cursor: link.path ? 'pointer' : 'default', justifyContent: 'flex-start' }} onClick={() => void session.openLink(link)} title={link.path ?? link.title}>{linkWord(link)} · {link.title}</Tag>)}</span></Field> : null}
             <Field data-stack="true"><b>Assignments</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
               {task.missions.slice().reverse().map(record => <Tag key={record.id} $tone={record.phase === 'done' ? 'ok' : record.phase === 'failed' || record.phase === 'needsYou' ? 'over' : missionLive(record) ? 'ai' : undefined} style={{ cursor: 'pointer', justifyContent: 'flex-start' }} onClick={() => void session.openMission(record.id)} title="Open the assignment">{MISSION_PHASE_LABEL[record.phase ?? 'planning']} · {record.title} · {new Date(record.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</Tag>)}
               {session.missionsEnabled ? <Pill type="button" $accent style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }} onClick={event => { event.stopPropagation(); setMenu({ kind: 'mission', rect: event.currentTarget.getBoundingClientRect() }) }}>Create assignment from this card ▾</Pill> : <span style={{ fontSize: 11.5, color: 'var(--tasks-muted)' }}>Assignments need PureDesktop.</span>}

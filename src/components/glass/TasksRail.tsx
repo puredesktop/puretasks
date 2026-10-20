@@ -1,5 +1,6 @@
 import type { BoardIndexEntry } from '../../hooks/useBoardsIndex'
 import type { TasksPlace } from '../../types'
+import { boardAgentRefs } from '../../agentRefs'
 import { hueOf } from './cardBits'
 import { Rail, RailDot, RailGroup, RailRow } from './glassStyles'
 
@@ -26,7 +27,7 @@ export function TasksRail({
       {boards.map(board => {
         const open = board.store ? board.store.tasks.filter(task => !task.archivedAt && !board.store!.columns?.find(column => column.id === task.status)?.done).length : null
         return (
-          <RailRow key={board.path} type="button" $on={place === 'board' && board.path === openPath} onClick={() => onOpenBoard(board.path)} title={board.path}>
+          <RailRow key={board.path} {...boardAgentRefs({ path: board.path, name: board.name })} type="button" $on={place === 'board' && board.path === openPath} onClick={() => onOpenBoard(board.path)} title={board.path}>
             <RailDot $color={`oklch(0.55 0.12 ${hueOf(board.name)})`} /><span className="name">{board.name}{board.isDraft ? ' · draft' : ''}</span>{open !== null ? <small>{open}</small> : null}
           </RailRow>
         )

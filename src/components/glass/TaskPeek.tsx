@@ -3,6 +3,7 @@ import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { MISSION_KINDS, type MissionKind } from '../../lib/missions'
 import { checklistProgress, columnAtLimit } from '../../lib/taskModel'
 import type { SuiteTask, TaskPriority } from '../../types'
+import { taskAgentRefs } from '../../agentRefs'
 import { CardChips } from './cardBits'
 import { MenuHead, MenuItem, MenuRule, Pill, Popover, Progress } from './glassStyles'
 
@@ -95,7 +96,7 @@ export function TaskPeek({
   })()
 
   return (
-    <Popover ref={ref} role="dialog" aria-label={`Peek: ${task.title}`} style={{ left: pos.left, top: pos.top, width: 360, gap: 10, padding: '14px 14px 8px' }} onMouseDown={event => event.stopPropagation()}>
+    <Popover ref={ref} {...taskAgentRefs(task)} role="dialog" aria-label={`Peek: ${task.title}`} style={{ left: pos.left, top: pos.top, width: 360, gap: 10, padding: '14px 14px 8px' }} onMouseDown={event => event.stopPropagation()}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontFamily: 'var(--tasks-mono)', fontSize: 10.5, color: 'var(--tasks-muted)' }}>{session.columns.find(column => column.id === task.status)?.label ?? task.status}</div>
