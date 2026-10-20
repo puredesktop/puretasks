@@ -326,7 +326,7 @@
         },
         {
           "name": "createTask",
-          "description": "Create a new task card on the open board with optional details, labels, links, owner, due date, priority, column/status, blockedBy, parentId (a subtask), estimateHours, repeat and remindAt. A column at its WIP limit refuses new cards. Call getTasksContext first; column ids come from listTaskColumns.",
+          "description": "Create a new task card on the open board with optional details, labels, links, owner, due date, priority, column/status, blockedBy, parentId (a subtask), estimateHours, repeat and remindAt. A column at its WIP limit refuses new cards. Call getTasksContext first; column ids come from listTaskColumns. Returns the new card's id and a compact summary (column, priority, labels, dates, counts of comments/checklists/links), not the whole card; getTask returns the full card.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -461,7 +461,7 @@
         },
         {
           "name": "updateTask",
-          "description": "Edit, move, or reorder a task card on the open board. Omitted fields are preserved; status moves the card to that column (ids from listTaskColumns) and beforeTaskId places it within the column — a move into a column at its WIP limit is refused unless force is true. Also sets blockedBy (cards it waits on), parentId (subtask of), estimateHours, loggedHours, repeat (daily/weekly/monthly; a done card comes back with the next due date) and remindAt. Task ids come from listTasks.",
+          "description": "Edit, move, or reorder a task card on the open board. Omitted fields are preserved; status moves the card to that column (ids from listTaskColumns) and beforeTaskId places it within the column — a move into a column at its WIP limit is refused unless force is true. Also sets blockedBy (cards it waits on), parentId (subtask of), estimateHours, loggedHours, repeat (daily/weekly/monthly; a done card comes back with the next due date) and remindAt. Task ids come from listTasks. Returns the card's compact summary (id, column, order, fields, counts of comments/checklists/links), not the whole card; getTask returns the full card.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -915,7 +915,7 @@
         {
           "name": "applyTaskBoardPatch",
           "risk": "destructive",
-          "description": "Apply or dry-run an ordered batch of column and task operations on the open board. Use dryRun: true first for anything broad; the result lists each operation's outcome plus a compact preview (column counts, touched task ids), never the whole board. restoreColumn and restoreTask take the deletedSnapshot payloads returned by deleteTaskColumn and deleteTask. Board-level (project) operations are not patch operations — use createTaskProject, updateTaskProject, deleteTaskProject, and openTaskProject.",
+          "description": "Apply or dry-run an ordered batch of column and task operations on the open board. Use dryRun: true first for anything broad; the result lists each operation's outcome (a card as its compact summary, never the whole card) plus a compact preview (column counts, touched task ids), never the whole board. restoreColumn and restoreTask take the deletedSnapshot payloads returned by deleteTaskColumn and deleteTask. Board-level (project) operations are not patch operations — use createTaskProject, updateTaskProject, deleteTaskProject, and openTaskProject.",
           "inputSchema": {
             "type": "object",
             "properties": {
