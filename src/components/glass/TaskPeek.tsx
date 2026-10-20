@@ -79,7 +79,7 @@ export function TaskPeek({
   async function mission(kind: MissionKind): Promise<void> {
     try {
       const created = await session.createMissionForTask(task.id, kind)
-      onToast(`Mission created: ${created.title}`)
+      onToast(`Assignment created: ${created.title}`)
     } catch (error) {
       onToast(error instanceof Error ? error.message : String(error))
     }
@@ -114,7 +114,7 @@ export function TaskPeek({
         <MenuItem type="button" $on={menu === 'owner'} onClick={() => setMenu(menu === 'owner' ? null : 'owner')}>Owner · {task.ownerName?.trim() || 'nobody'}<kbd>O</kbd></MenuItem>
         <MenuItem type="button" $on={menu === 'due'} onClick={() => setMenu(menu === 'due' ? null : 'due')}>Due · {task.dueAt ? task.dueAt.slice(0, 10) : 'none'}<kbd>U</kbd></MenuItem>
         <MenuItem type="button" $on={menu === 'priority'} onClick={() => setMenu(menu === 'priority' ? null : 'priority')}>Priority · {task.priority}<kbd>P</kbd></MenuItem>
-        {session.missionsEnabled ? <MenuItem type="button" $tone="accent" $on={menu === 'mission'} onClick={() => setMenu(menu === 'mission' ? null : 'mission')}>Create mission ▸<kbd>M</kbd></MenuItem> : null}
+        {session.missionsEnabled ? <MenuItem type="button" $tone="accent" $on={menu === 'mission'} onClick={() => setMenu(menu === 'mission' ? null : 'mission')}>Create assignment ▸<kbd>M</kbd></MenuItem> : null}
       </div>
       {menu ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, padding: 6, borderRadius: 10, background: 'var(--tasks-well)' }}>
@@ -141,9 +141,9 @@ export function TaskPeek({
             {(['high', 'normal', 'low'] as TaskPriority[]).map(priority => <MenuItem key={priority} type="button" $on={priority === task.priority} onClick={() => { void session.updateTask(task.id, { priority }); setMenu(null) }}>{priority[0].toUpperCase() + priority.slice(1)}</MenuItem>)}
           </>) : null}
           {menu === 'mission' ? (<>
-            <MenuHead>Create mission</MenuHead>
+            <MenuHead>Create assignment</MenuHead>
             {MISSION_KINDS.map(kind => <MenuItem key={kind.id} type="button" title={kind.detail} onClick={() => void mission(kind.id)}>{kind.label}</MenuItem>)}
-            <span style={{ padding: '6px 10px 4px', fontSize: 11, color: 'var(--tasks-faint)', lineHeight: 1.45 }}>A mission with the card as its brief. Progress shows on the card; results land through its tools.</span>
+            <span style={{ padding: '6px 10px 4px', fontSize: 11, color: 'var(--tasks-faint)', lineHeight: 1.45 }}>An assignment with the card as its brief. Progress shows on the card; results land through its tools.</span>
           </>) : null}
         </div>
       ) : null}

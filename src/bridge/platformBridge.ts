@@ -136,11 +136,11 @@ export async function fetchTasksBootState(): Promise<PureTasksBootState> {
 
 /** Creates the mission in a project named after it; with autoStart it runs once planned. */
 export async function createMission(request: { instructions: string; title: string; autoStart: boolean }): Promise<{ id: string }> {
-  if (isStandaloneDevMode()) throw new Error('Missions run in PureDesktop, not the browser preview.')
+  if (isStandaloneDevMode()) throw new Error('Assignments run in PureDesktop, not the browser preview.')
   const mission = (await bridge.call(PLATFORM_BRIDGE_METHODS.MISSIONS_CREATE, [
     { instructions: request.instructions, title: request.title, autoStart: request.autoStart },
   ])) as { id?: unknown } | null
-  if (!mission || typeof mission.id !== 'string') throw new Error('The shell did not return a mission.')
+  if (!mission || typeof mission.id !== 'string') throw new Error('The shell did not return an assignment.')
   return { id: mission.id }
 }
 

@@ -972,7 +972,7 @@
         },
         {
           "name": "createMissionFromTask",
-          "description": "Turn a card into a mission the shell runs (the card's own “Create mission” button). kind: 'do' works the task and moves it to Review, 'steps' writes a checklist only, 'draft' writes the first draft of the linked document, 'dependencies' links what the card waits on. The mission's progress shows on the card (getTask.missions). Use when the user asks for the work to be done or planned by a mission; never also do the work yourself. Requires approval: starts a mission.",
+          "description": "Turn a card into an assignment the shell runs (the card's own “Create assignment” button). kind: 'do' works the task and moves it to Review, 'steps' writes a checklist only, 'draft' writes the first draft of the linked document, 'dependencies' links what the card waits on. The assignment's progress shows on the card (getTask.missions). Use when the user asks for the work to be done or planned by an assignment; never also do the work yourself. Requires approval: starts an assignment.",
           "inputSchema": {
             "type": "object",
             "properties": {

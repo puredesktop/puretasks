@@ -636,12 +636,12 @@ export function useTasksSession({
     async (taskId: string, kind: MissionKind) => {
       const task = storeRef.current.tasks.find(candidate => candidate.id === taskId)
       if (!task) throw new Error('Unknown task.')
-      if (!missionsEnabled) throw new Error('This shell does not offer missions to apps yet.')
+      if (!missionsEnabled) throw new Error('This shell does not offer assignments to apps yet.')
       const generation = boardGeneration.current
       const brief = missionBrief(kind, task, boardPath, taskColumnsForStore(storeRef.current))
       const mission = await createShellMission({ ...brief, autoStart: true })
       if (!mounted.current || generation !== boardGeneration.current || !storeRef.current.tasks.some(candidate => candidate.id === taskId)) {
-        throw new Error('Mission created, but the original card is no longer open. Find the mission in Missions.')
+        throw new Error('Assignment created, but the original card is no longer open. Find the assignment in Assignments.')
       }
       const record = missionRecord(mission.id, brief.title)
       await applyStoreUpdate(current => ({
@@ -650,11 +650,11 @@ export function useTasksSession({
           candidate.id === taskId
             ? updateTaskDetails(candidate, {
                 missions: [...candidate.missions, { ...record, phase: 'planning' }],
-                links: [...candidate.links, normalizeResourceLink({ type: 'mission', title: `Mission · ${brief.title}`, resourceId: mission.id })],
+                links: [...candidate.links, normalizeResourceLink({ type: 'mission', title: `Assignment · ${brief.title}`, resourceId: mission.id })],
               })
             : candidate,
         ),
-        activity: [createActivity(taskId, 'mission', `Mission created: ${kind === 'do' ? 'do the task' : kind === 'steps' ? 'break it into steps' : kind === 'draft' ? 'draft the linked document' : 'find what it depends on'}`), ...current.activity],
+        activity: [createActivity(taskId, 'mission', `Assignment created: ${kind === 'do' ? 'do the task' : kind === 'steps' ? 'break it into steps' : kind === 'draft' ? 'draft the linked document' : 'find what it depends on'}`), ...current.activity],
       }))
       return { id: mission.id, title: brief.title }
     },
@@ -689,7 +689,7 @@ export function useTasksSession({
               if (!captured.has(key) || captured.get(key) !== mission.phase || !missionLive(mission) || !status || status.phase === mission.phase) return mission
               changed = taskChanged = true
               if (['done', 'failed', 'needsYou'].includes(status.phase)) {
-                activity.push(createActivity(task.id, 'mission', `Mission ${status.phase === 'done' ? 'finished' : status.phase === 'failed' ? 'failed' : 'needs you'}: ${mission.title}`, now))
+                activity.push(createActivity(task.id, 'mission', `Assignment ${status.phase === 'done' ? 'finished' : status.phase === 'failed' ? 'failed' : 'needs you'}: ${mission.title}`, now))
               }
               return { ...mission, phase: status.phase, checkedAt: now }
             })

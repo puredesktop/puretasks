@@ -12,7 +12,7 @@ export function GlassListView({ session, groupBy, onOpenTask }: { session: Tasks
   const groups: Array<{ id: string; label: string; note?: string; tasks: SuiteTask[] }> = (() => {
     if (groupBy === 'owner') {
       const names = Array.from(new Set(tasks.map(task => task.ownerName?.trim() || ''))).sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)))
-      return names.map(name => ({ id: name || '__none', label: name || 'Nobody yet', note: name ? undefined : 'assign, or create a mission', tasks: tasks.filter(task => (task.ownerName?.trim() || '') === name) }))
+      return names.map(name => ({ id: name || '__none', label: name || 'Nobody yet', note: name ? undefined : 'assign, or create an assignment', tasks: tasks.filter(task => (task.ownerName?.trim() || '') === name) }))
     }
     if (groupBy === 'label') {
       const labels = Array.from(new Set(tasks.flatMap(task => (task.labels.length ? task.labels : ['']))))

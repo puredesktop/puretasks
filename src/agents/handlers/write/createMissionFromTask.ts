@@ -28,7 +28,7 @@ export async function createMissionFromTaskHandler(
   return {
     content: formatAgentToolJson({
       mission,
-      note: 'The mission runs in the shell; its progress shows on the card and in getTask.missions. Do not do the work yourself as well.',
+      note: 'The assignment runs in the shell; its progress shows on the card and in getTask.missions. Do not do the work yourself as well.',
     }),
   }
 }

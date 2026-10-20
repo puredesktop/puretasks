@@ -35,7 +35,7 @@ export function dueTone(dueAt: string | undefined, done: boolean): 'due' | 'soon
 
 const LINK_WORD: Record<TaskResourceLink['type'], string> = {
   file: 'File', writer: 'Writer', book: 'Book', chapter: 'Chapter', 'chat-message': 'Chat', 'agent-run': 'Agent run',
-  mail: 'Mail', video: 'Video', calendar: 'Calendar', issue: 'Issue', canvas: 'Canvas', sheets: 'Sheets', mission: 'Mission',
+  mail: 'Mail', video: 'Video', calendar: 'Calendar', issue: 'Issue', canvas: 'Canvas', sheets: 'Sheets', mission: 'Assignment',
 }
 export const linkWord = (link: TaskResourceLink): string => LINK_WORD[link.type] ?? link.type
 
@@ -55,7 +55,7 @@ export function CardChips({ task, store, done, compact }: { task: SuiteTask; sto
       {!compact && task.labels.slice(0, 2).map(label => <Tag key={label}>{label}</Tag>)}
       {blocked ? <Tag $tone="blocked" title={blockers.map(candidate => candidate.title).join(', ')}>Blocked by · {blockers[0]?.title ?? '?'}</Tag> : null}
       {lastMission && (missionLive(lastMission) || lastMission.phase === 'needsYou' || lastMission.phase === 'failed') ? (
-        <Tag $tone={lastMission.phase === 'needsYou' || lastMission.phase === 'failed' ? 'over' : 'ai'}>Mission · {MISSION_PHASE_LABEL[lastMission.phase ?? 'planning']}</Tag>
+        <Tag $tone={lastMission.phase === 'needsYou' || lastMission.phase === 'failed' ? 'over' : 'ai'}>Assignment · {MISSION_PHASE_LABEL[lastMission.phase ?? 'planning']}</Tag>
       ) : null}
       {progress.total && !compact ? <Tag $tone={progress.done === progress.total ? 'ok' : undefined}>{progress.done} / {progress.total}</Tag> : null}
       {task.ownerName?.trim() ? <Avatar title={task.ownerName} $hue={hueOf(task.ownerName)} style={{ marginLeft: 'auto' }}>{ownerInitials(task.ownerName) || task.ownerName.slice(0, 1)}</Avatar> : null}

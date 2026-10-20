@@ -76,7 +76,7 @@ export function FilterBar({
   async function missionSelected(kind: MissionKind): Promise<void> {
     let made = 0
     for (const id of ids) { try { await session.createMissionForTask(id, kind); made += 1 } catch { /* reported below */ } }
-    onToast(`${made} mission${made === 1 ? '' : 's'} created`)
+    onToast(`${made} assignment${made === 1 ? '' : 's'} created`)
     setOpen(null); onClearSelection()
   }
   const day = (offset: number): string => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10) }
@@ -134,7 +134,7 @@ export function FilterBar({
           <Pill type="button" onClick={toggle('selDue')}>Due <Caret /></Pill>
           <Pill type="button" onClick={toggle('selPriority')}>Priority <Caret /></Pill>
           <Divider />
-          {session.missionsEnabled ? <Pill type="button" onClick={toggle('selMission')}>Create mission <Caret /></Pill> : null}
+          {session.missionsEnabled ? <Pill type="button" onClick={toggle('selMission')}>Create assignment <Caret /></Pill> : null}
           <Pill type="button" onClick={() => void patchSelected({ archivedAt: new Date().toISOString() }, 'Archived')}>Archive</Pill>
           <Pill type="button" $quiet aria-label="Clear selection" onClick={onClearSelection}>×</Pill>
         </SelectionBar>
@@ -144,7 +144,7 @@ export function FilterBar({
         {open === 'selLabel' ? pop(<><MenuHead>Add label</MenuHead>{session.labels.map(label => <MenuItem key={label} type="button" onClick={async () => { for (const id of ids) { const task = session.store.tasks.find(candidate => candidate.id === id); if (task && !task.labels.includes(label)) await session.updateTask(id, { labels: [...task.labels, label] }) } onToast(`Label ${label} added`); setOpen(null); onClearSelection() }}>{label}</MenuItem>)}{!session.labels.length ? <Meta style={{ padding: '6px 10px' }}>No labels on this board yet.</Meta> : null}</>) : null}
         {open === 'selDue' ? pop(<><MenuHead>Due</MenuHead>{[['Today', day(0)], ['Tomorrow', day(1)], ['Next week', day(7)], ['No due date', '']].map(([label, value]) => <MenuItem key={label} type="button" onClick={() => void patchSelected({ dueAt: value }, `Due ${label.toLowerCase()}`)}>{label}</MenuItem>)}</>) : null}
         {open === 'selPriority' ? pop(<><MenuHead>Priority</MenuHead>{(['high', 'normal', 'low'] as TaskPriority[]).map(priority => <MenuItem key={priority} type="button" onClick={() => void patchSelected({ priority }, `Priority ${priority}`)}>{priority[0].toUpperCase() + priority.slice(1)}</MenuItem>)}</>) : null}
-        {open === 'selMission' ? pop(<><MenuHead>Create a mission per card</MenuHead>{MISSION_KINDS.map(kind => <MenuItem key={kind.id} type="button" title={kind.detail} onClick={() => void missionSelected(kind.id)}>{kind.label}</MenuItem>)}</>, 240) : null}
+        {open === 'selMission' ? pop(<><MenuHead>Create an assignment per card</MenuHead>{MISSION_KINDS.map(kind => <MenuItem key={kind.id} type="button" title={kind.detail} onClick={() => void missionSelected(kind.id)}>{kind.label}</MenuItem>)}</>, 240) : null}
       </FilterRow>
     )
   }

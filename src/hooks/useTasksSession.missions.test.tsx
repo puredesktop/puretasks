@@ -42,7 +42,7 @@ it('does not attach a late mission to a different board with a reused card id', 
   let result: unknown
   await act(async () => { gate.resolve({ id: 'm1' }); result = await outcome })
   expect(result).toBeInstanceOf(Error)
-  expect((result as Error).message).toContain('Find the mission in Missions')
+  expect((result as Error).message).toContain('Find the assignment in Assignments')
   expect(latest.readStore()).toBe(next)
   expect(mutations).toHaveLength(0)
 })

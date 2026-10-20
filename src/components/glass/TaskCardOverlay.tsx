@@ -67,7 +67,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
   }
   async function mission(kind: MissionKind): Promise<void> {
     setMenu(null)
-    try { const created = await session.createMissionForTask(task.id, kind); onToast(`Mission created: ${created.title}`) }
+    try { const created = await session.createMissionForTask(task.id, kind); onToast(`Assignment created: ${created.title}`) }
     catch (error) { onToast(error instanceof Error ? error.message : String(error)) }
   }
   const saveTitle = (): void => { const trimmed = title.trim(); if (trimmed && trimmed !== task.title) void session.updateTask(task.id, { title: trimmed }); else setTitle(task.title) }
@@ -109,7 +109,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
               <SectionHead>
                 <SectionTitle>Checklist</SectionTitle>
                 {progress.total ? <><span style={{ fontFamily: 'var(--tasks-mono)', fontSize: 11, color: 'var(--tasks-muted)' }}>{progress.done} / {progress.total}</span><Progress $value={(progress.done / progress.total) * 100} style={{ maxWidth: 120 }} /></> : null}
-                {session.missionsEnabled ? <button type="button" className="link" onClick={() => void mission('steps')}>Create mission: break it into steps</button> : null}
+                {session.missionsEnabled ? <button type="button" className="link" onClick={() => void mission('steps')}>Create assignment: break it into steps</button> : null}
               </SectionHead>
               <TaskChecklistEditor task={task} session={session} />
             </div>
@@ -151,17 +151,17 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
             </span></Field>
             {blockedCards.length ? <Field data-stack="true"><b>Blocks</b><span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>{blockedCards.map(card => <Tag key={card.id} style={{ cursor: 'pointer' }} onClick={() => onOpenTask(card.id)}>{card.title}</Tag>)}</span></Field> : null}
             {task.links.filter(link => link.type !== 'mission').length ? <Field data-stack="true"><b>Linked</b><span style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>{task.links.filter(link => link.type !== 'mission').map(link => <Tag key={link.id} $tone="link" style={{ cursor: link.path ? 'pointer' : 'default', justifyContent: 'flex-start' }} onClick={() => void session.openLink(link)} title={link.path ?? link.title}>{linkWord(link)} · {link.title}</Tag>)}</span></Field> : null}
-            <Field data-stack="true"><b>Missions</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
-              {task.missions.slice().reverse().map(record => <Tag key={record.id} $tone={record.phase === 'done' ? 'ok' : record.phase === 'failed' || record.phase === 'needsYou' ? 'over' : missionLive(record) ? 'ai' : undefined} style={{ cursor: 'pointer', justifyContent: 'flex-start' }} onClick={() => void session.openMission(record.id)} title="Open the mission">{MISSION_PHASE_LABEL[record.phase ?? 'planning']} · {record.title} · {new Date(record.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</Tag>)}
-              {session.missionsEnabled ? <Pill type="button" $accent style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }} onClick={event => { event.stopPropagation(); setMenu({ kind: 'mission', rect: event.currentTarget.getBoundingClientRect() }) }}>Create mission from this card ▾</Pill> : <span style={{ fontSize: 11.5, color: 'var(--tasks-muted)' }}>Missions need PureDesktop.</span>}
+            <Field data-stack="true"><b>Assignments</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
+              {task.missions.slice().reverse().map(record => <Tag key={record.id} $tone={record.phase === 'done' ? 'ok' : record.phase === 'failed' || record.phase === 'needsYou' ? 'over' : missionLive(record) ? 'ai' : undefined} style={{ cursor: 'pointer', justifyContent: 'flex-start' }} onClick={() => void session.openMission(record.id)} title="Open the assignment">{MISSION_PHASE_LABEL[record.phase ?? 'planning']} · {record.title} · {new Date(record.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</Tag>)}
+              {session.missionsEnabled ? <Pill type="button" $accent style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }} onClick={event => { event.stopPropagation(); setMenu({ kind: 'mission', rect: event.currentTarget.getBoundingClientRect() }) }}>Create assignment from this card ▾</Pill> : <span style={{ fontSize: 11.5, color: 'var(--tasks-muted)' }}>Assignments need PureDesktop.</span>}
             </span></Field>
             <Field data-stack="true"><b>My day</b><span><Pill type="button" $on={inMyDay} onClick={onToggleMyDay} style={{ alignSelf: 'flex-start' }}>{inMyDay ? 'In My day · remove' : 'Add to My day'} <kbd>T</kbd></Pill></span></Field>
             <div style={{ marginTop: 'auto', paddingTop: 10, fontSize: 11, color: 'var(--tasks-faint)', lineHeight: 1.5 }}>Created {new Date(task.createdAt).toLocaleDateString()} · updated {new Date(task.updatedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · <button type="button" onClick={() => { void session.deleteTask(task.id); onClose() }} style={{ padding: 0, border: 0, background: 'none', font: 'inherit', color: 'var(--tasks-bad-ink)', cursor: 'pointer' }}>Delete…</button></div>
           </OverlaySide> : null}
         </OverlayGrid>
         {menu ? (
-          <Popover role="menu" aria-label={menu.kind === 'mission' ? 'Create mission' : 'Waits on'} style={{ left: Math.min(menu.rect.left, window.innerWidth - 300), top: menu.rect.bottom + 6, width: 290, maxHeight: 320, overflow: 'auto' }} onMouseDown={event => event.stopPropagation()}>
-            {menu.kind === 'mission' ? (<><MenuHead>Create mission</MenuHead>{MISSION_KINDS.map(kind => <MenuItem key={kind.id} type="button" onClick={() => void mission(kind.id)}><span>{kind.label}<span style={{ display: 'block', fontSize: 11, fontWeight: 400, color: 'var(--tasks-muted)' }}>{kind.detail}</span></span></MenuItem>)}</>) : (
+          <Popover role="menu" aria-label={menu.kind === 'mission' ? 'Create assignment' : 'Waits on'} style={{ left: Math.min(menu.rect.left, window.innerWidth - 300), top: menu.rect.bottom + 6, width: 290, maxHeight: 320, overflow: 'auto' }} onMouseDown={event => event.stopPropagation()}>
+            {menu.kind === 'mission' ? (<><MenuHead>Create assignment</MenuHead>{MISSION_KINDS.map(kind => <MenuItem key={kind.id} type="button" onClick={() => void mission(kind.id)}><span>{kind.label}<span style={{ display: 'block', fontSize: 11, fontWeight: 400, color: 'var(--tasks-muted)' }}>{kind.detail}</span></span></MenuItem>)}</>) : (
               <><MenuHead>Waits on</MenuHead>{candidates.map(candidate => <MenuItem key={candidate.id} type="button" onClick={() => { void session.updateTask(task.id, { blockedBy: [...task.blockedBy, candidate.id] }); setMenu(null) }}><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{candidate.title}</span><kbd>{session.columns.find(column => column.id === candidate.status)?.label}</kbd></MenuItem>)}{!candidates.length ? <span style={{ padding: '6px 10px', fontSize: 12, color: 'var(--tasks-muted)' }}>No other open cards.</span> : null}</>
             )}
           </Popover>
