@@ -1,6 +1,7 @@
 import { styled } from 'styled-components'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { dueBucket, isBlocked } from '../../lib/taskModel'
+import { columnAgentRefs, taskAgentRefs } from '../../agentRefs'
 import { todayKey } from './MyDayView'
 import { Kicker, Meta, Tag } from './glassStyles'
 
@@ -80,14 +81,14 @@ export function GlassTimelineView({ session, onOpenTask }: { session: TasksSessi
         <Row style={{ minHeight: 18 }}><span /><div style={{ position: 'relative', height: 16 }}>{ticks.map(tick => <span key={tick.at} style={{ position: 'absolute', left: `${pct(tick.at)}%`, transform: 'translateX(-50%)', fontFamily: 'var(--tasks-mono)', fontSize: 10, color: 'var(--tasks-faint)', whiteSpace: 'nowrap' }}>{tick.label}</span>)}</div></Row>
         {groups.map(group => (
           <div key={group.column.id} style={{ display: 'contents' }}>
-            <Row style={{ minHeight: 24 }}><Kicker>{group.column.label} · {group.tasks.length}</Kicker><span /></Row>
+            <Row style={{ minHeight: 24 }} {...columnAgentRefs(group.column)}><Kicker>{group.column.label} · {group.tasks.length}</Kicker><span /></Row>
             {group.tasks.map(task => {
               const done = session.isDoneStatus(task.status)
               const start = Date.parse(task.createdAt.slice(0, 10))
               const end = Math.max(start + DAY, Date.parse((task.dueAt ?? task.updatedAt).slice(0, 10)) + DAY)
               const tone = done ? 'done' : dueBucket(task) === 'overdue' ? 'over' : isBlocked(task, session.store) ? 'blocked' : 'open'
               return (
-                <Row key={task.id}>
+                <Row key={task.id} {...taskAgentRefs(task)}>
                   <span className="t" title={task.title} onClick={() => onOpenTask(task.id)}>{task.title}</span>
                   <Track>
                     <TodayLine style={{ left: `${pct(now.getTime())}%` }} />

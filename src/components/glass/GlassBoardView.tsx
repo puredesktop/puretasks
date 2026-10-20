@@ -3,6 +3,7 @@ import { Check, MoreHorizontal, Plus } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { checklistProgress, columnAtLimit, columnLoad, TASK_STATUSES } from '../../lib/taskModel'
 import type { SuiteTask, TaskColumn, TaskStatus } from '../../types'
+import { columnAgentRefs, taskAgentRefs } from '../../agentRefs'
 import { CardChips } from './cardBits'
 import type { Swimlanes } from './FilterBar'
 import { AddRow, BoardGrid, Card, CardList, CardMeta, ColumnHead, ColumnTitleField, DropSlot, GlassColumn, IconBtn, Lane, LaneHead, MenuHead, MenuItem, MenuRule, Pick, Popover, Progress, QuickAdd, Wip } from './glassStyles'
@@ -33,6 +34,7 @@ export function GlassCard({ task, session, selected, picked, picking, dragging, 
   return (
     <Card
       ref={ref}
+      {...taskAgentRefs(task)}
       tabIndex={0}
       draggable
       aria-selected={selected}
@@ -173,6 +175,7 @@ export function GlassBoardView({ session, callbacks }: { session: TasksSessionSt
       <GlassColumn
         key={`${lane.id}:${status}`}
         aria-label={column.label}
+        {...columnAgentRefs(column)}
         $over={isOver && dragId !== null}
         $refused={refused === status}
         $done={column.done}

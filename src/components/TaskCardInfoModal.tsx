@@ -30,6 +30,7 @@ import {
   formatShortTime,
   parseLabels,
 } from './puretasksFormat'
+import { activityAgentRefs, checklistAgentRefs, checklistItemAgentRefs, commentAgentRefs, linkAgentRefs } from '../agentRefs'
 import { TaskStatusStepper } from './TaskStatusStepper'
 import {
   ActivityHeader,
@@ -621,7 +622,7 @@ export function TaskChecklistEditor({
               ? 0
               : Math.round((done / checklist.items.length) * 100)
           return (
-            <DetailSection key={checklist.id}>
+            <DetailSection key={checklist.id} {...checklistAgentRefs(checklist)}>
               <SectionHeader>
                 {editingTitleId === checklist.id ? (
                   <TextField
@@ -670,7 +671,7 @@ export function TaskChecklistEditor({
               </ProgressTrack>
               <ChecklistBody>
                 {checklist.items.map(item => (
-                  <ChecklistRow key={item.id}>
+                  <ChecklistRow key={item.id} {...checklistItemAgentRefs(item)}>
                     <input
                       checked={item.done}
                       type="checkbox"
@@ -812,7 +813,7 @@ export function TaskResourceLinksEditor({
         </EmptyActionRow>
       ) : (
         task.links.map(link => (
-          <LinkRow key={link.id}>
+          <LinkRow key={link.id} {...linkAgentRefs(link)}>
             <RowLabel title={link.path ?? link.resourceId}>
               {link.title}
               {link.appSlug ? ` · ${link.appSlug}` : ''}
@@ -1010,7 +1011,7 @@ export function TaskConversationPanel({
       ) : (
         <ConversationSpine>
           {entries.map(entry => (
-            <ConversationItem key={`${entry.kind}-${entry.id}`}>
+            <ConversationItem key={`${entry.kind}-${entry.id}`} {...(entry.kind === 'comment' ? commentAgentRefs(entry, `Comment by ${entry.authorName}`) : activityAgentRefs(entry, entry.text))}>
               <ConversationAvatar />
               <ConversationBubble>
                 {entry.kind === 'comment' && editingCommentId === entry.id ? (

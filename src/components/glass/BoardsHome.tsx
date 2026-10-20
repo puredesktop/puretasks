@@ -1,5 +1,6 @@
 import type { BoardIndexEntry } from '../../hooks/useBoardsIndex'
 import { dueBucket, isBlocked } from '../../lib/taskModel'
+import { boardAgentRefs } from '../../agentRefs'
 import { hueOf } from './cardBits'
 import { Avatar, BoardCard, Kicker, Meta, Pill, PlaceTitle, Progress } from './glassStyles'
 import { ownerInitials } from '../puretasksFormat'
@@ -46,7 +47,7 @@ export function BoardsHome({ boards, openPath, loading, error, onRetry, onOpenBo
           const people = Array.from(new Set(live.map(task => task.ownerName?.trim()).filter((name): name is string => Boolean(name)))).slice(0, 5)
           const edited = store ? Math.max(...live.map(task => Date.parse(task.updatedAt)), Date.parse(store.projects[0]?.updatedAt ?? '')) : NaN
           return (
-            <BoardCard key={board.path} type="button" onClick={() => onOpenBoard(board.path)} aria-current={board.path === openPath ? 'true' : undefined}>
+            <BoardCard key={board.path} {...boardAgentRefs({ path: board.path, name: board.name })} type="button" onClick={() => onOpenBoard(board.path)} aria-current={board.path === openPath ? 'true' : undefined}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ width: 10, height: 10, borderRadius: '50%', background: `oklch(0.55 0.12 ${hueOf(board.name)})`, flexShrink: 0 }} /><h3 style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{board.name}</h3><span style={{ marginLeft: 'auto', fontFamily: 'var(--tasks-mono)', fontSize: 10.5, color: 'var(--tasks-muted)', whiteSpace: 'nowrap' }}>{board.isDraft ? 'draft' : Number.isFinite(edited) ? `edited ${new Date(edited).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}</span></div>
               {store?.projects[0]?.description ? <Meta style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{store.projects[0].description}</Meta> : board.error ? <Meta style={{ color: 'var(--tasks-bad-ink)' }}>Could not read: {board.error}</Meta> : null}
               {store ? (

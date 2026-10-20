@@ -2,6 +2,7 @@ import type { BoardIndexEntry } from '../../hooks/useBoardsIndex'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { checklistProgress, dueBucket, isBlocked } from '../../lib/taskModel'
 import type { SuiteTask, TasksStore } from '../../types'
+import { taskAgentRefs } from '../../agentRefs'
 import { dueTone, dueWords, hueOf } from './cardBits'
 import { Kicker, ListRowGlass, Meta, Pill, PlaceTitle, SectionRow, Tag } from './glassStyles'
 
@@ -57,7 +58,7 @@ export function MyDayView({ session, boards, openPath, chosen, onChoose, onOpen,
   const row = (entry: CrossTask, actions: React.ReactNode, muted = false): React.ReactElement => {
     const progress = checklistProgress(entry.task)
     return (
-      <ListRowGlass key={taskRef(entry)} $muted={muted}>
+      <ListRowGlass key={taskRef(entry)} {...(entry.foreign ? {} : taskAgentRefs(entry.task))} $muted={muted}>
         <input type="checkbox" aria-label={`Done: ${entry.task.title}`} checked={false} disabled={muted} onChange={() => void toggleDone(entry)} />
         <div style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => onOpen(entry)}>
           <b>{entry.task.title}</b>

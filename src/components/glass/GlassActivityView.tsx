@@ -3,6 +3,7 @@ import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { taskStatusLabel } from '../../lib/taskModel'
 import { activityDisplayText, activityMovedStatus, formatShortTime } from '../puretasksFormat'
 import { Avatar, Kicker, Meta, Tag } from './glassStyles'
+import { activityAgentRefs } from '../../agentRefs'
 import { hueOf } from './cardBits'
 import { ownerInitials } from '../puretasksFormat'
 
@@ -62,7 +63,7 @@ export function GlassActivityView({ session, onOpenTask }: { session: TasksSessi
               const moved = activityMovedStatus(item.text)
               const who = item.type === 'agent' || item.type === 'mission' ? 'AI' : task?.ownerName ? ownerInitials(task.ownerName) : 'PT'
               return (
-                <Item key={item.id} type="button" onClick={() => onOpenTask(item.taskId)}>
+                <Item key={item.id} {...activityAgentRefs(item, task?.title ?? 'Task')} type="button" onClick={() => onOpenTask(item.taskId)}>
                   <Avatar $size={26} $hue={who === 'AI' ? 318 : task?.ownerName ? hueOf(task.ownerName) : 230}>{who}</Avatar>
                   <span style={{ minWidth: 0 }}><b>{task?.title ?? 'Task'}</b><span className="what">{moved ? <>moved to <Tag>{taskStatusLabel(session.columns, moved)}</Tag></> : item.type === 'mission' ? <Tag $tone="ai">{item.text}</Tag> : activityDisplayText(item.text)}</span></span>
                   <span className="when">{formatShortTime(item.at)}</span>
