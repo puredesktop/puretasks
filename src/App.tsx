@@ -126,6 +126,10 @@ function ReadyTasksApp({
   agentToolsReady: boolean
   bridgeMethods: readonly string[]
 }): React.ReactElement {
+  const [uiSettings, setUiSettings] = useState(settings)
+  const rememberUiSettings = useCallback((patch: Partial<TasksAppSettings>) => {
+    setUiSettings(current => ({ ...current, ...patch }))
+  }, [])
   // ---- Unified document lifecycle: one board = one `.tasks` package --------
   const boundStoreRef = useRef<TasksStore>(starterBoardStore(NEW_BOARD_NAME))
   const boundPathRef = useRef<string | null>(null)
@@ -254,6 +258,7 @@ function ReadyTasksApp({
     [readBoard],
   )
   const openBoardWithTask = useCallback((path: string, taskId?: string) => {
+    setUiSettings(current => ({ ...current, place: 'board' }))
     // The requested card belongs to this open, never to another pending read.
     void openBoard(path, taskId).catch(() => undefined)
   }, [openBoard])
@@ -304,6 +309,7 @@ function ReadyTasksApp({
       setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME),
     )
     sessionRef.current.replaceStore(boardStore)
+    setUiSettings(current => ({ ...current, place: 'board' }))
     setBoardViewRevision(value => value + 1)
     lifecycle.reset()
     setSwitcherOpen(false)
@@ -508,7 +514,8 @@ function ReadyTasksApp({
         boardsLoading={boardsIndex.loading}
         boardsError={boardsIndex.error}
         onRetryBoards={boardsIndex.refresh}
-        settings={openTaskRequest ? { ...settings, place: 'board', selectedTaskId: openTaskRequest.taskId } : settings}
+        settings={openTaskRequest ? { ...uiSettings, place: 'board', selectedTaskId: openTaskRequest.taskId } : uiSettings}
+        onSettingsChange={rememberUiSettings}
         onOpenBoard={openBoardWithTask}
         onNewBoard={template => void newBoard(undefined, template).catch(() => undefined)}
         initialOpenTaskId={openTaskRequest?.taskId ?? null}
@@ -521,7 +528,7 @@ function ReadyTasksApp({
         open={switcherOpen}
         openError={openError}
         onClose={() => setSwitcherOpen(false)}
-        onOpenDocument={path => openBoard(path).catch(() => undefined)}
+        onOpenDocument={path => { setUiSettings(current => ({ ...current, place: 'board' })); return openBoard(path).catch(() => undefined) }}
         onCreateNew={() => void newBoard().catch(() => undefined)}
         newLabel="New board"
         title="Open a board"

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createTask, starterBoardStore } from './lib/taskModel'
 import { deferred } from './test/deferred'
 import { TASK_PACKAGE_CONTENT_FILE } from './constants'
+import type { TasksAppSettings } from './types'
 import type { TasksBoardApi } from './App'
 import type { TasksSessionState } from './hooks/useTasksSession'
 const readTextFile = vi.fn()
@@ -12,7 +13,7 @@ const refresh = vi.fn(async () => undefined)
 const flush = vi.fn(async () => undefined)
 const boardA = starterBoardStore('A')
 boardA.tasks = [{ ...createTask(boardA.projects[0].id, 'A card'), id: 'a-card' }]
-let latest: { session: TasksSessionState; board: TasksBoardApi; initialOpenTaskId?: string; onOpenBoard: (path: string, taskId?: string) => void }
+let latest: { settings: TasksAppSettings; onSettingsChange: (patch: Partial<TasksAppSettings>) => void; session: TasksSessionState; board: TasksBoardApi; initialOpenTaskId?: string; onOpenBoard: (path: string, taskId?: string) => void }
 let mountedShells = 0
 let switcher: { onOpenDocument: (path: string) => Promise<void> }
 vi.mock('@purescience/platform-bridge/components/AppFrame', () => ({ AppFrame: ({ children }: { children: ReactNode }) => <>{children}</> }))
@@ -110,4 +111,14 @@ it('resets board-local overlays and selection when a copied board has reused pro
   await act(async () => { await switcher.onOpenDocument('/copy.tasks') })
   expect(latest.board.title).toBe('Copy')
   expect(mountedShells).toBe(before + 1)
+})
+
+it('retains Today choices and panel preferences when switching boards remounts the shell', async () => {
+  const myDay = { '2026-10-21': ['/a.tasks#a-card'] }
+  await act(async () => latest.onSettingsChange({ myDay, railOpen: false, cardDetailsOpen: false, place: 'myDay' }))
+  readTextFile.mockResolvedValue(target('B', 'b-card'))
+  await act(async () => latest.onOpenBoard('/b.tasks', 'b-card'))
+  expect(latest.board.title).toBe('B')
+  expect(latest.settings).toMatchObject({ myDay, railOpen: false, cardDetailsOpen: false, place: 'board' })
+  expect(latest.initialOpenTaskId).toBe('b-card')
 })

@@ -15,14 +15,15 @@ export function TasksRail({
   place: TasksPlace
   boards: BoardIndexEntry[]
   openPath: string | null
-  counts: { myDay: number; upcoming: number; unfiled: number }
+  counts: { myDay: number; upcoming: number; review: number }
   onPlace: (place: TasksPlace) => void
   onOpenBoard: (path: string) => void
 }): React.ReactElement {
   return (
     <Rail id="tasks-rail" aria-label="Boards and places">
-      <RailRow type="button" $on={place === 'myDay'} onClick={() => onPlace('myDay')}><RailDot /><span className="name">My day</span><small>{counts.myDay}</small></RailRow>
+      <RailRow type="button" $on={place === 'myDay'} onClick={() => onPlace('myDay')}><RailDot /><span className="name">Today</span><small>{counts.myDay}</small></RailRow>
       <RailRow type="button" $on={place === 'upcoming'} onClick={() => onPlace('upcoming')}><RailDot $color="var(--pure-attention)" /><span className="name">Upcoming</span><small>{counts.upcoming}</small></RailRow>
+      <RailRow type="button" $on={place === 'review'} onClick={() => onPlace('review')}><RailDot $color="var(--pure-success)" /><span className="name">Review</span><small>{counts.review}</small></RailRow>
       <RailGroup>Boards</RailGroup>
       {boards.map(board => {
         const open = board.store ? board.store.tasks.filter(task => !task.archivedAt && !board.store!.columns?.find(column => column.id === task.status)?.done).length : null

@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { Check, PanelRightClose, PanelRightOpen, X } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
 import { MISSION_KINDS, MISSION_PHASE_LABEL, missionLive, type MissionKind } from '../../lib/missions'
-import { blocks, checklistProgress, isBlocked, openBlockers, subtasksOf, TASK_REPEATS } from '../../lib/taskModel'
+import { blocks, checklistProgress, isBlocked, isReviewStatus, openBlockers, subtasksOf, TASK_REPEATS } from '../../lib/taskModel'
 import type { SuiteTask, TaskPriority, TaskRepeat } from '../../types'
 import { TaskChecklistEditor, TaskConversationPanel, TaskResourceLinksEditor } from '../TaskCardInfoModal'
 import { dueWords, hueOf, linkWord } from './cardBits'
 import { Avatar, DoneRing, Field, FieldInput, FieldSelect, IconBtn, MenuHead, MenuItem, OverlayBackdrop, OverlayGrid, OverlayMain, OverlayPanel, OverlaySide, OverlayTop, Pill, Popover, Progress, Prose, SectionHead, SectionTitle, Stepper, SubtaskRow, Tag, TitleInput } from './glassStyles'
 import { ownerInitials } from '../puretasksFormat'
+import { ReviewDecision } from './ReviewDecision'
 import { OwnerPicker } from './OwnerPicker'
 import { columnAgentRefs, linkAgentRefs, taskAgentRefs } from '../../agentRefs'
 
@@ -82,7 +83,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
       <OverlayPanel {...taskAgentRefs(task)} role="dialog" aria-modal="true" aria-labelledby="card-overlay-title" onMouseDown={() => { if (menu) setMenu(null) }}>
         <OverlayTop>
           <span>{session.activeProject.name} › {session.columns.find(column => column.id === task.status)?.label ?? task.status}{parent ? ` › ${parent.title}` : ''}</span>
-          <span className="hint">D done · ← → move · T my day · Esc close</span>
+          <span className="hint">D done · ← → move · T today · Esc close</span>
           <Pill type="button" $quiet style={{ height: 26 }} onClick={() => { void session.updateTask(task.id, { archivedAt: new Date().toISOString() }); onClose() }}>Archive</Pill>
           {onToggleDetails ? <IconBtn type="button" aria-label={detailsOpen ? 'Hide card details' : 'Show card details'} title={detailsOpen ? 'Hide card details' : 'Show card details'} aria-expanded={detailsOpen} aria-controls={detailsOpen ? 'card-details' : undefined} onClick={onToggleDetails}>{detailsOpen ? <PanelRightClose size={15} strokeWidth={2} /> : <PanelRightOpen size={15} strokeWidth={2} />}</IconBtn> : null}
           <IconBtn type="button" aria-label="Close card" onClick={onClose}><X size={15} strokeWidth={2} /></IconBtn>
@@ -102,6 +103,7 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
                 </Stepper>
               </div>
             </div>
+            {isReviewStatus(store, task.status) && !done ? <ReviewDecision key={task.id} session={session} task={task} onToast={onToast} /> : null}
             <div>
               <SectionHead><SectionTitle>Description</SectionTitle></SectionHead>
               <Prose aria-label="Description" placeholder="What is this, and what does done look like?" value={notes} onChange={event => setNotes(event.target.value)} onBlur={saveNotes} />
@@ -152,11 +154,11 @@ export function TaskCardOverlay({ session, task, detailsOpen = true, onToggleDet
             </span></Field>
             {blockedCards.length ? <Field data-stack="true"><b>Blocks</b><span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>{blockedCards.map(card => <Tag key={card.id} {...taskAgentRefs(card)} style={{ cursor: 'pointer' }} onClick={() => onOpenTask(card.id)}>{card.title}</Tag>)}</span></Field> : null}
             {task.links.filter(link => link.type !== 'mission').length ? <Field data-stack="true"><b>Linked</b><span style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>{task.links.filter(link => link.type !== 'mission').map(link => <Tag key={link.id} {...linkAgentRefs(link)} $tone="link" style={{ cursor: link.path ? 'pointer' : 'default', justifyContent: 'flex-start' }} onClick={() => void session.openLink(link)} title={link.path ?? link.title}>{linkWord(link)} · {link.title}</Tag>)}</span></Field> : null}
-            <Field data-stack="true"><b>Assignments</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
+            {session.missionsEnabled || task.missions.length ? <Field data-stack="true"><b>Assignments</b><span style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 2 }}>
               {task.missions.slice().reverse().map(record => <Tag key={record.id} $tone={record.phase === 'done' ? 'ok' : record.phase === 'failed' || record.phase === 'needsYou' ? 'over' : missionLive(record) ? 'ai' : undefined} style={{ cursor: 'pointer', justifyContent: 'flex-start' }} onClick={() => void session.openMission(record.id)} title="Open the assignment">{MISSION_PHASE_LABEL[record.phase ?? 'planning']} · {record.title} · {new Date(record.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</Tag>)}
               {session.missionsEnabled ? <Pill type="button" $accent style={{ justifyContent: 'flex-start', alignSelf: 'flex-start' }} onClick={event => { event.stopPropagation(); setMenu({ kind: 'mission', rect: event.currentTarget.getBoundingClientRect() }) }}>Create assignment from this card ▾</Pill> : <span style={{ fontSize: 11.5, color: 'var(--tasks-muted)' }}>Assignments need PureDesktop.</span>}
-            </span></Field>
-            <Field data-stack="true"><b>My day</b><span><Pill type="button" $on={inMyDay} onClick={onToggleMyDay} style={{ alignSelf: 'flex-start' }}>{inMyDay ? 'In My day · remove' : 'Add to My day'} <kbd>T</kbd></Pill></span></Field>
+            </span></Field> : null}
+            <Field data-stack="true"><b>Today</b><span><Pill type="button" $on={inMyDay} onClick={onToggleMyDay} style={{ alignSelf: 'flex-start' }}>{inMyDay ? 'In Today · remove' : 'Add to Today'} <kbd>T</kbd></Pill></span></Field>
             <div style={{ marginTop: 'auto', paddingTop: 10, fontSize: 11, color: 'var(--tasks-faint)', lineHeight: 1.5 }}>Created {new Date(task.createdAt).toLocaleDateString()} · updated {new Date(task.updatedAt).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · <button type="button" onClick={() => { void session.deleteTask(task.id); onClose() }} style={{ padding: 0, border: 0, background: 'none', font: 'inherit', color: 'var(--tasks-bad-ink)', cursor: 'pointer' }}>Delete…</button></div>
           </OverlaySide> : null}
         </OverlayGrid>
