@@ -74,7 +74,7 @@ export interface TasksSessionState {
   /** Load a board store opened from a `.tasks` package (not a mutation). */
   replaceStore: (
     store: TasksStore,
-    options?: { keepSelection?: boolean },
+    options?: { keepSelection?: boolean; keepBoard?: boolean },
   ) => void
   /** The live store, independent of render timing. */
   readStore: () => TasksStore
@@ -229,9 +229,12 @@ export function useTasksSession({
   )
 
   const replaceStore = useCallback(
-    (next: TasksStore, options?: { keepSelection?: boolean }) => {
-      boardGeneration.current += 1
-      setBoardRevision(boardGeneration.current)
+    (next: TasksStore, options?: { keepSelection?: boolean; keepBoard?: boolean }) => {
+      // keepBoard: the same board, changed by someone else (live) — work in flight on it stands.
+      if (!options?.keepBoard) {
+        boardGeneration.current += 1
+        setBoardRevision(boardGeneration.current)
+      }
       storeRef.current = next
       setStore(next)
       if (!options?.keepSelection) setSelectedTaskId(null)
