@@ -258,7 +258,7 @@
         },
         {
           "name": "updateTaskColumn",
-          "description": "Rename, reorder, hide/collapse, change done behavior, or set a WIP limit (wipLimit; 0 removes it) for a column/status on the open board. Omitted fields are preserved. Column ids come from listTaskColumns.",
+          "description": "Rename, reorder, hide/collapse, change done or review-queue participation, or set a WIP limit (wipLimit; 0 removes it) for a column/status on the open board. Omitted fields are preserved. Column ids come from listTaskColumns.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -288,6 +288,10 @@
               "done": {
                 "type": "boolean",
                 "description": "Set whether this column counts as complete."
+              },
+              "review": {
+                "type": "boolean",
+                "description": "Include this non-done column in the human review queue. False excludes it."
               },
               "wipLimit": {
                 "type": "integer",

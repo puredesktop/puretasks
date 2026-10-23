@@ -95,7 +95,7 @@ export interface TasksSessionState {
   ) => Promise<void>
   patchColumn: (
     status: TaskStatus,
-    patch: Partial<Pick<TaskColumn, 'collapsed' | 'hidden' | 'done' | 'wipLimit'>>,
+    patch: Partial<Pick<TaskColumn, 'collapsed' | 'hidden' | 'done' | 'review' | 'wipLimit'>>,
   ) => Promise<void>
   setArchiveDoneAfterDays: (days: number) => void
   deleteColumn: (status: TaskStatus, targetStatus?: TaskStatus) => Promise<void>
@@ -121,7 +121,7 @@ export interface TasksSessionState {
     }>,
   ) => Promise<void>
   /** Refused (returns false) when the target column is at its WIP limit, unless forced. */
-  moveTask: (taskId: string, status: TaskStatus, options?: { force?: boolean }) => Promise<boolean>
+  moveTask: (taskId: string, status: TaskStatus, options?: { force?: boolean; comment?: string }) => Promise<boolean>
   moveTasks: (taskIds: string[], status: TaskStatus) => Promise<void>
   /** A card under another: same column, parentId set. */
   createSubtask: (parentId: string, title: string) => Promise<string | null>
@@ -370,6 +370,7 @@ export function useTasksSession({
       const generation = boardGeneration.current
       let createdId: string | null = null
       await applyStoreUpdate(current => {
+        if (columnAtLimit(current, status)) throw new Error(`${taskStatusLabel(taskColumnsForStore(current), status)} is at its limit — finish a card there first.`)
         const created = createTask(current.projects[0].id, trimmed, status)
         const task = moveTaskStatus(
           created,
@@ -456,7 +457,7 @@ export function useTasksSession({
   const patchColumn = useCallback(
     async (
       status: TaskStatus,
-      patch: Partial<Pick<TaskColumn, 'collapsed' | 'hidden' | 'done' | 'wipLimit'>>,
+      patch: Partial<Pick<TaskColumn, 'collapsed' | 'hidden' | 'done' | 'review' | 'wipLimit'>>,
     ) => {
       await applyStoreUpdate(current => {
         const columns = taskColumnsForStore(current)
@@ -533,7 +534,7 @@ export function useTasksSession({
   )
 
   const moveTask = useCallback(
-    async (taskId: string, status: TaskStatus, options?: { force?: boolean }) => {
+    async (taskId: string, status: TaskStatus, options?: { force?: boolean; comment?: string }) => {
       const before = storeRef.current.tasks.find(candidate => candidate.id === taskId)
       if (!before || before.status === status) return true
       if (!options?.force && columnAtLimit(storeRef.current, status)) return false
@@ -552,6 +553,8 @@ export function useTasksSession({
           now,
         )
         const moved = moveTaskStatus(task, status, now, undefined, done)
+        const comment = options?.comment?.trim()
+        if (comment) moved.comments = [{ id: createId('comment'), authorName: 'PureScience User', text: comment, createdAt: now, updatedAt: now }, ...moved.comments]
         // A repeating card that is done comes back as a fresh open card.
         const repeatDue = done && task.repeat ? nextRepeatDue(task.dueAt, task.repeat) : undefined
         const firstOpen = currentColumns.find(column => !column.done && !column.hidden)?.id ?? 'inbox'

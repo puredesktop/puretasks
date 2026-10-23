@@ -65,6 +65,7 @@ export type AgentBoardPatchOperation =
       collapsed?: boolean
       hidden?: boolean
       done?: boolean
+      review?: boolean
       wipLimit?: number
     }
   | { type: 'deleteColumn'; status: TaskStatus; targetStatus: TaskStatus }
@@ -412,6 +413,7 @@ export function updateTaskColumnAgentMutation(
     collapsed?: boolean
     hidden?: boolean
     done?: boolean
+    review?: boolean
     wipLimit?: number
   },
 ): AgentMutationResult<{ column: TaskColumn }> {
@@ -431,6 +433,7 @@ export function updateTaskColumnAgentMutation(
             : {}),
           ...(input.hidden !== undefined ? { hidden: input.hidden } : {}),
           ...(input.done !== undefined ? { done: input.done } : {}),
+          ...(input.review !== undefined ? { review: input.review } : {}),
           ...(input.wipLimit !== undefined
             ? input.wipLimit > 0 ? { wipLimit: input.wipLimit } : { wipLimit: undefined }
             : {}),

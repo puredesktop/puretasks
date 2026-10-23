@@ -185,3 +185,28 @@ it('sets completion when creating directly in a custom done column', async () =>
   })
   expect(latest!.store.tasks[0].completedAt).toBeTruthy()
 })
+
+it('refuses capture at a WIP limit without creating a card', async () => {
+  const session = await mount()
+  await act(async () => { await session.patchColumn('inbox', { wipLimit: 1 }); await session.createTask('First') })
+  const before = session.readStore()
+  await expect(session.createTask('Second')).rejects.toThrow('at its limit')
+  expect(session.readStore()).toBe(before)
+})
+it('writes review feedback with the move, and writes neither when WIP refuses it', async () => {
+  const session = await mount()
+  let id: string | null = null
+  await act(async () => {
+    id = await session.createTask('Review a garden plan', 'review')
+    await session.patchColumn('doing', { wipLimit: 1 })
+    await session.createTask('Build raised bed', 'doing')
+  })
+  const before = session.readStore()
+  expect(await session.moveTask(id!, 'doing', { comment: 'Leave more room for a path' })).toBe(false)
+  expect(session.readStore()).toBe(before)
+  await act(async () => { await session.patchColumn('doing', { wipLimit: 2 }) })
+  const writes = mutated.length
+  await act(async () => { expect(await session.moveTask(id!, 'doing', { comment: 'Leave more room for a path' })).toBe(true) })
+  expect(mutated).toHaveLength(writes + 1)
+  expect(session.readStore().tasks.find(task => task.id === id)).toMatchObject({ status: 'doing', comments: [expect.objectContaining({ text: 'Leave more room for a path' })] })
+})

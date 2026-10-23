@@ -54,6 +54,8 @@ export interface TaskColumn {
   collapsed?: boolean
   hidden?: boolean
   done?: boolean
+  /** Include this column in the human review queue. Defaults to the system Review column. */
+  review?: boolean
   /** Work-in-progress limit: a drop into a full column is refused (0 or absent = no limit). */
   wipLimit?: number
 }
@@ -172,7 +174,7 @@ export interface TaskFilterView {
 }
 
 /** Where the app is: one board, or a cross-board place. */
-export type TasksPlace = 'board' | 'myDay' | 'upcoming' | 'boards'
+export type TasksPlace = 'board' | 'myDay' | 'upcoming' | 'review' | 'boards'
 /** The look: frosted over the desk, or flat paper on a plain ground. Unset follows the system. */
 export type TasksAppearance = 'glass' | 'solid'
 
