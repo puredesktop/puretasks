@@ -4,6 +4,7 @@ import { usePlatformBridge } from '@purescience/platform-ui/bridge/react/usePlat
 import { usePlatformViewportResource } from '@purescience/platform-ui/bridge/react/usePlatformViewportResource'
 import { useDocumentLifecycle } from '@purescience/platform-ui/bridge/react/useDocumentLifecycle'
 import { useDocumentHotkeys } from '@purescience/platform-ui/bridge/react/useDocumentHotkeys'
+import { useLiveJson } from '@purescience/platform-ui/editing/live/useLiveJson'
 import {
   DocumentHeaderActions,
   DocumentSwitcher,
@@ -31,7 +32,7 @@ import { starterBoardStore } from './lib/taskModel'
 import { useBoardsIndex } from './hooks/useBoardsIndex'
 import type { BOARD_TEMPLATES } from './components/glass/BoardsHome'
 import { tasksSnapshotHtml } from './lib/tasksSnapshot'
-import { parseTaskPackageStore, taskPackageFiles } from './lib/taskPackage'
+import { parseTaskPackageStore, taskPackageContent, taskPackageFiles } from './lib/taskPackage'
 import type { TasksAppSettings, TasksStore } from './types'
 
 const NEW_BOARD_NAME = 'Untitled board'
@@ -180,8 +181,15 @@ function ReadyTasksApp({
     openGeneration.current += 1
     boundStoreRef.current = next
     setBoardName(next.projects[0]?.name ?? NEW_BOARD_NAME)
+    // Live: the change goes to everyone on the board, and the live copy writes the package when it is time.
+    const project = next.projects[0]
+    if (liveRef.current?.status === 'on' && project) {
+      liveRef.current.write(JSON.parse(taskPackageContent(next, project)) as Record<string, unknown>)
+      return
+    }
     lifecycleRef.current.markDirty()
   }, [])
+  const liveRef = useRef<ReturnType<typeof useLiveJson> | null>(null)
 
   const session = useTasksSession({
     initialStore: boundStoreRef.current,
@@ -194,6 +202,32 @@ function ReadyTasksApp({
   useEffect(() => {
     sessionRef.current = session
   }, [session])
+
+  // A board the organisation shares, edited live (useLiveJson): everyone's cards, columns and moves merged card by
+  // card; the live copy writes the package, so this tab stops writing it itself while live.
+  const live = useLiveJson(lifecycle.doc.path ? boardContentPath(lifecycle.doc.path) : null, {
+    loadSaved: async path => JSON.parse(await readTextFile(path)) as Record<string, unknown>,
+    onRemote: next => {
+      let boardStore: TasksStore
+      try {
+        boardStore = parseTaskPackageStore(JSON.stringify(next))
+      } catch {
+        return
+      }
+      boundStoreRef.current = boardStore
+      setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME)
+      sessionRef.current.replaceStore(boardStore, { keepSelection: true, keepBoard: true })
+    },
+    serialize: () => {
+      const path = lifecycleRef.current.doc.path
+      const project = boundStoreRef.current.projects[0]
+      if (!path || !project) return null
+      return { resourcePath: path, files: taskPackageFiles(boundStoreRef.current, project, nowIso()) }
+    },
+    // Let go by the live copy: what is on screen is saved as the board always was.
+    onEnded: () => lifecycleRef.current.markDirty(),
+  })
+  liveRef.current = live
 
   // Lifecycle-owned path changes (lazy draft, promote, rename) → remember it.
   useEffect(() => {
