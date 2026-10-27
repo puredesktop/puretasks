@@ -53,3 +53,38 @@ For developer access, app submissions, or marketplace questions, contact [info@p
 ## Contributing
 
 We welcome pull requests, bug reports, new features, and documentation improvements. You may modify and distribute this app under its applicable licenses. See [CONTRIBUTING.md](../CONTRIBUTING.md), [LICENSE](../LICENSE), and [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+
+## Everyday boards, Today and Review
+
+Boards are the main workspace for any kind of work: projects, errands, maintenance,
+writing or team planning. Owners, dates and assignments are optional. Rename and
+reorder columns, add your own stages, and keep using board, list, calendar or timeline
+views with the same cards and saved filters.
+
+- **Quick capture:** press **N** or **+ Task**, enter a title and press Enter. The form
+  names the current board and its Inbox column. Cancel leaves no placeholder card.
+  A full column refuses the addition and keeps your draft.
+- **Today:** choose cards across boards, including undated and unassigned work.
+  These choices are separate from deadlines and never reschedule a task. Today
+  includes all owners; it is not an inferred personal assignment filter.
+- **Review:** the system Review column participates by default. Each non-done
+  column's menu can include or exclude it, so custom approval stages work too.
+  The Personal template's Someday column stays a backlog, including boards with
+  the original four-column Personal layout. Renaming a review column preserves
+  its participation. A done column never appears in the review queue.
+- **Review decisions:** open a card to read the brief, latest comment and linked
+  work. Accept marks it done. Request changes records feedback and returns it to
+  Doing (or another non-review work column). The note and move save together;
+  WIP limits apply. This works without an agent or meeting.
+
+Cards on another board offer **Open card** or **Review card**. Opening loads their
+own board through the normal document lifecycle before any edits. Failed board
+reads are shown in the cross-board views with Retry.
+
+## Local experience preview
+
+Run `npm run dev -- --port 5618` and visit `/dev/preview.html`. This development-only
+adapter runs the real App and document lifecycle with fictional workshop and home
+boards. Changes persist in browser session storage; Reset examples restores the
+fixtures. Narrow window checks the layout at 390px. There are no external file,
+assignment or app writes, and this adapter is not included in the production build.

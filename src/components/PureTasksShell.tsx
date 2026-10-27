@@ -4,7 +4,7 @@ import type { TasksBoardApi } from '../App'
 import type { BoardIndexEntry } from '../hooks/useBoardsIndex'
 import type { TasksSessionState } from '../hooks/useTasksSession'
 import { updateTasksSettings } from '../bridge/platformBridge'
-import { DEFAULT_FILTERS, dueBucket, isBlocked } from '../lib/taskModel'
+import { dueBucket, isBlocked, isReviewStatus } from '../lib/taskModel'
 import type { TasksAppSettings, TasksPlace } from '../types'
 import { useAppearance } from '../hooks/useAppearance'
 import { BoardsHome, type BOARD_TEMPLATES } from './glass/BoardsHome'
@@ -12,11 +12,12 @@ import { FilterBar, type GroupBy, type Swimlanes } from './glass/FilterBar'
 import { GlassBoardView } from './glass/GlassBoardView'
 import { GlassListView } from './glass/GlassListView'
 import { Body, GlassShell, Main, Toast } from './glass/glassStyles'
-import { crossBoardTasks, MyDayView, taskRef, todayKey, UpcomingView, type CrossTask } from './glass/MyDayView'
+import { crossBoardTasks, MyDayView, ReviewView, taskRef, todayKey, UpcomingView, type CrossTask } from './glass/MyDayView'
 import { TaskCardOverlay } from './glass/TaskCardOverlay'
 import { TaskPeek } from './glass/TaskPeek'
 import { TasksRail } from './glass/TasksRail'
 import { TasksTopBar } from './glass/TasksTopBar'
+import { QuickCapture } from './glass/QuickCapture'
 import { boardAgentRefs } from '../agentRefs'
 import { GlassActivityView } from './glass/GlassActivityView'
 import { GlassCalendarView } from './glass/GlassCalendarView'
@@ -33,6 +34,7 @@ interface PureTasksShellProps {
   boardsError?: string | null
   onRetryBoards?: () => Promise<void>
   settings: TasksAppSettings
+  onSettingsChange?: (patch: Partial<TasksAppSettings>) => void
   /** Open another board; with a task id, open that card once it is loaded. */
   onOpenBoard: (path: string, taskId?: string) => void
   onNewBoard: (template: (typeof BOARD_TEMPLATES)[number]) => void
@@ -40,20 +42,34 @@ interface PureTasksShellProps {
   initialOpenTaskId?: string | null
 }
 
-export function PureTasksShell({ session, board, boards, boardsLoading, boardsError, onRetryBoards, settings, onOpenBoard, onNewBoard, initialOpenTaskId }: PureTasksShellProps): React.ReactElement {
+export function PureTasksShell({ session, board, boards, boardsLoading, boardsError, onRetryBoards, settings, onSettingsChange, onOpenBoard, onNewBoard, initialOpenTaskId }: PureTasksShellProps): React.ReactElement {
   const [place, setPlaceState] = useState<TasksPlace>(settings.place ?? 'board')
   const [groupBy, setGroupByState] = useState<GroupBy>(settings.groupBy ?? 'none')
   const [swimlanes, setSwimlanesState] = useState<Swimlanes>(settings.swimlanes ?? 'none')
   const [myDay, setMyDayState] = useState<Record<string, string[]>>(settings.myDay ?? {})
+  const dayChoices = useRef(myDay)
+  const choiceWrites = useRef(Promise.resolve())
+  const [dayKey, setDayKey] = useState(todayKey)
   const [railOpen, setRailOpen] = useState<boolean>(() => settings.railOpen ?? !narrowWindow())
   const [detailsOpen, setDetailsOpen] = useState<boolean>(() => settings.cardDetailsOpen ?? !narrowWindow())
   const appearance = useAppearance()
   const [openTaskId, setOpenTaskId] = useState<string | null>(initialOpenTaskId ?? null)
   const [peek, setPeek] = useState<{ taskId: string; rect: DOMRect } | null>(null)
   const [selection, setSelection] = useState<ReadonlySet<string>>(new Set())
+  const [capturing, setCapturing] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const saveSettings = useCallback(async (patch: Partial<TasksAppSettings>) => {
+    await updateTasksSettings(patch)
+    onSettingsChange?.(patch)
+  }, [onSettingsChange])
+  useEffect(() => {
+    if (settings.myDay) { dayChoices.current = settings.myDay; setMyDayState(settings.myDay) }
+  }, [settings.myDay])
+
+  useEffect(() => { setPlaceState(settings.place ?? 'board') }, [settings.place])
 
   const onToast = useCallback((text: string) => {
     setToast(text)
@@ -61,28 +77,33 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
     toastTimer.current = setTimeout(() => setToast(null), 2600)
   }, [])
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
-  const setPlace = useCallback((next: TasksPlace) => { setPlaceState(next); setPeek(null); setSelection(new Set()); void updateTasksSettings({ place: next }).catch(() => undefined) }, [])
+  const setPlace = useCallback((next: TasksPlace) => { setPlaceState(next); setPeek(null); setSelection(new Set()); void saveSettings({ place: next }).catch(() => undefined) }, [saveSettings])
 
   useEffect(() => {
     setPeek(null)
   }, [session.viewMode])
-  const setGroupBy = useCallback((next: GroupBy) => { setGroupByState(next); void updateTasksSettings({ groupBy: next }).catch(() => undefined) }, [])
-  const toggleRail = useCallback(() => { const next = !railOpen; setRailOpen(next); void updateTasksSettings({ railOpen: next }).catch(() => undefined) }, [railOpen])
-  const toggleDetails = useCallback(() => { const next = !detailsOpen; setDetailsOpen(next); void updateTasksSettings({ cardDetailsOpen: next }).catch(() => undefined) }, [detailsOpen])
-  const setSwimlanes = useCallback((next: Swimlanes) => { setSwimlanesState(next); void updateTasksSettings({ swimlanes: next }).catch(() => undefined) }, [])
-  const chosenToday = useMemo(() => new Set(myDay[todayKey()] ?? []), [myDay])
-  const chooseForDay = useCallback((ref: string, on: boolean) => {
-    setMyDayState(current => {
-      const key = todayKey()
-      const today = new Set(current[key] ?? [])
-      if (on) today.add(ref); else today.delete(ref)
-      // Keep only today and yesterday so the setting never grows.
-      const kept: Record<string, string[]> = { [key]: Array.from(today) }
-      const next = { ...kept }
-      void updateTasksSettings({ myDay: next }).catch(() => undefined)
-      return next
-    })
+  const setGroupBy = useCallback((next: GroupBy) => { setGroupByState(next); void saveSettings({ groupBy: next }).catch(() => undefined) }, [saveSettings])
+  const toggleRail = useCallback(() => { const next = !railOpen; setRailOpen(next); void saveSettings({ railOpen: next }).catch(() => undefined) }, [railOpen, saveSettings])
+  const toggleDetails = useCallback(() => { const next = !detailsOpen; setDetailsOpen(next); void saveSettings({ cardDetailsOpen: next }).catch(() => undefined) }, [detailsOpen, saveSettings])
+  const setSwimlanes = useCallback((next: Swimlanes) => { setSwimlanesState(next); void saveSettings({ swimlanes: next }).catch(() => undefined) }, [saveSettings])
+  useEffect(() => {
+    const timer = setInterval(() => setDayKey(todayKey()), 30_000)
+    return () => clearInterval(timer)
   }, [])
+  const chosenToday = useMemo(() => new Set(myDay[dayKey] ?? []), [myDay, dayKey])
+  const chooseForDay = useCallback((ref: string, on: boolean) => {
+    // Serialize settings writes so rapid choices compose; failed writes leave the visible list intact.
+    choiceWrites.current = choiceWrites.current.then(async () => {
+      const key = todayKey()
+      const today = new Set(dayChoices.current[key] ?? [])
+      if (on) today.add(ref); else today.delete(ref)
+      const next = { [key]: Array.from(today) }
+      await saveSettings({ myDay: next })
+      dayChoices.current = next
+      setDayKey(key)
+      setMyDayState(next)
+    }).catch(error => onToast(`Could not save Today: ${error instanceof Error ? error.message : String(error)}`))
+  }, [onToast, saveSettings])
 
   const openTask = useCallback((taskId: string) => { setPeek(null); session.setSelectedTask(taskId); setOpenTaskId(taskId) }, [session])
   const closeTask = useCallback(() => setOpenTaskId(null), [])
@@ -121,24 +142,13 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  async function newTask(): Promise<void> {
-    try {
-      if (place !== 'board') setPlace('board')
-      session.setFilters(DEFAULT_FILTERS)
-      if (session.viewMode !== 'board') session.setViewMode('board')
-      const first = session.columns.find(column => !column.hidden && !column.done)?.id ?? 'inbox'
-      const createdId = await session.createTask('New task', first)
-      if (createdId && session.readStore().tasks.some(task => task.id === createdId)) openTask(createdId)
-    } catch (failure) {
-      onToast(failure instanceof Error ? failure.message : String(failure))
-    }
-  }
+  function newTask(): void { setCapturing(true) }
 
   const cross = useMemo(() => crossBoardTasks(boards, board.path).filter(entry => !entry.done), [boards, board.path])
   const counts = useMemo(() => ({
     myDay: cross.filter(entry => dueBucket(entry.task) === 'overdue' || dueBucket(entry.task) === 'today' || chosenToday.has(taskRef(entry))).length,
     upcoming: cross.filter(entry => { const bucket = dueBucket(entry.task); return bucket === 'tomorrow' || bucket === 'week' || bucket === 'later' }).length,
-    unfiled: 0,
+    review: cross.filter(entry => isReviewStatus(entry.store, entry.task.status)).length,
   }), [cross, chosenToday])
 
   const summary = (() => {
@@ -158,6 +168,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
   return (
     <GlassShell data-place={place} data-appearance={appearance}>
       <TasksTopBar session={session} place={place} railOpen={railOpen} onToggleRail={toggleRail} boardName={board.title} onOpenSwitcher={board.openSwitcher} onNewTask={() => void newTask()} searchRef={searchRef} />
+      {capturing ? <QuickCapture key={session.activeProject.id} session={session} boardName={board.title} onClose={() => setCapturing(false)} onCreated={id => { setCapturing(false); openTask(id) }} /> : null}
       <Body onMouseDown={() => { if (peek) setPeek(null) }}>
         {railOpen ? <TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} /> : null}
         <Main {...(place === 'board' ? boardAgentRefs({ path: board.path, projectId: session.activeProject.id, name: board.title, open: true }) : {})}>
@@ -171,13 +182,18 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
               {session.viewMode === 'activity' || session.viewMode === 'files' ? <GlassActivityView session={session} onOpenTask={openTask} /> : null}
             </>
           ) : null}
+          {place !== 'board' && place !== 'boards' && (boardsLoading || boardsError || boards.some(entry => entry.error)) ? <div role={boardsError || boards.some(entry => entry.error) ? 'alert' : 'status'} style={{ padding: '8px 0', fontSize: 12 }}>
+            {boardsLoading ? 'Refreshing boards…' : boardsError ?? 'Some boards could not be read. This view may be incomplete.'}
+            {onRetryBoards && !boardsLoading ? <button type="button" onClick={() => void onRetryBoards()}>Retry</button> : null}
+          </div> : null}
+          {place === 'review' ? <ReviewView boards={boards} openPath={board.path} onOpen={openCross} /> : null}
           {place === 'myDay' ? <MyDayView session={session} boards={boards} openPath={board.path} chosen={chosenToday} onChoose={chooseForDay} onOpen={openCross} onToast={onToast} /> : null}
           {place === 'upcoming' ? <UpcomingView boards={boards} openPath={board.path} onOpen={openCross} /> : null}
           {place === 'boards' ? <BoardsHome boards={boards} openPath={board.path} loading={boardsLoading} error={boardsError} onRetry={onRetryBoards} onOpenBoard={path => { setPlace('board'); onOpenBoard(path) }} onNewBoard={template => { setPlace('board'); onNewBoard(template) }} /> : null}
         </Main>
       </Body>
       {peekTask && peek && !openTaskId ? <TaskPeek session={session} task={peekTask} anchor={peek.rect} onClose={() => setPeek(null)} onOpen={() => openTask(peekTask.id)} onToast={onToast} /> : null}
-      {openTask_ ? <TaskCardOverlay session={session} task={openTask_} detailsOpen={detailsOpen} onToggleDetails={toggleDetails} onClose={closeTask} onOpenTask={openTask} onToast={onToast} inMyDay={openRef ? chosenToday.has(openRef) : false} onToggleMyDay={() => { if (!openRef) { onToast('Save the board first.'); return } const on = !chosenToday.has(openRef); chooseForDay(openRef, on); onToast(on ? 'Added to My day' : 'Taken off My day') }} /> : null}
+      {openTask_ ? <TaskCardOverlay session={session} task={openTask_} detailsOpen={detailsOpen} onToggleDetails={toggleDetails} onClose={closeTask} onOpenTask={openTask} onToast={onToast} inMyDay={openRef ? chosenToday.has(openRef) : false} onToggleMyDay={() => { if (!openRef) { onToast('Save the board first.'); return } const on = !chosenToday.has(openRef); chooseForDay(openRef, on) }} /> : null}
       {toast ? <Toast role="status">{toast}</Toast> : null}
     </GlassShell>
   )

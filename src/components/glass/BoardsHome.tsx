@@ -1,15 +1,15 @@
 import type { BoardIndexEntry } from '../../hooks/useBoardsIndex'
-import { dueBucket, isBlocked } from '../../lib/taskModel'
+import { dueBucket, isBlocked, isReviewStatus } from '../../lib/taskModel'
 import { boardAgentRefs } from '../../agentRefs'
 import { hueOf } from './cardBits'
 import { Avatar, BoardCard, Kicker, Meta, Pill, PlaceTitle, Progress } from './glassStyles'
 import { ownerInitials } from '../puretasksFormat'
 
-export const BOARD_TEMPLATES: ReadonlyArray<{ id: string; label: string; detail: string; columns: Array<{ id: string; label: string; done?: boolean; wipLimit?: number }> }> = [
+export const BOARD_TEMPLATES: ReadonlyArray<{ id: string; label: string; detail: string; columns: Array<{ id: string; label: string; done?: boolean; review?: boolean; wipLimit?: number }> }> = [
   { id: 'kanban', label: 'Kanban', detail: 'Inbox · Next · Doing (3) · Review · Done', columns: [{ id: 'inbox', label: 'Inbox' }, { id: 'next', label: 'Next' }, { id: 'doing', label: 'Doing', wipLimit: 3 }, { id: 'review', label: 'Review' }, { id: 'done', label: 'Done', done: true }] },
   { id: 'sprint', label: 'Sprint', detail: 'Backlog · This sprint · Doing (4) · Done', columns: [{ id: 'inbox', label: 'Backlog' }, { id: 'sprint', label: 'This sprint' }, { id: 'doing', label: 'Doing', wipLimit: 4 }, { id: 'done', label: 'Done', done: true }] },
   { id: 'editorial', label: 'Editorial', detail: 'Idea · Draft · Edit · Typeset · Published', columns: [{ id: 'inbox', label: 'Idea' }, { id: 'doing', label: 'Draft' }, { id: 'edit', label: 'Edit' }, { id: 'review', label: 'Typeset' }, { id: 'done', label: 'Published', done: true }] },
-  { id: 'personal', label: 'Personal', detail: 'Today · This week · Someday · Done', columns: [{ id: 'doing', label: 'Today' }, { id: 'inbox', label: 'This week' }, { id: 'review', label: 'Someday' }, { id: 'done', label: 'Done', done: true }] },
+  { id: 'personal', label: 'Personal', detail: 'Today · This week · Someday · Done', columns: [{ id: 'doing', label: 'Today' }, { id: 'inbox', label: 'This week' }, { id: 'review', label: 'Someday', review: false }, { id: 'done', label: 'Done', done: true }] },
 ]
 
 /** Every board on this Mac as a glass card with its numbers, and the templates a new one starts from. */
@@ -41,7 +41,7 @@ export function BoardsHome({ boards, openPath, loading, error, onRetry, onOpenBo
           const open = live.filter(task => !doneIds.has(task.status))
           const done = live.length - open.length
           const doing = open.filter(task => task.status === 'doing').length
-          const review = open.filter(task => task.status === 'review').length
+          const review = open.filter(task => isReviewStatus(store!, task.status)).length
           const overdue = open.filter(task => dueBucket(task) === 'overdue').length
           const blocked = store ? open.filter(task => isBlocked(task, store)).length : 0
           const people = Array.from(new Set(live.map(task => task.ownerName?.trim()).filter((name): name is string => Boolean(name)))).slice(0, 5)

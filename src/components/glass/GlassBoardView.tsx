@@ -1,7 +1,7 @@
 import { Fragment, useRef, useState } from 'react'
 import { Check, MoreHorizontal, Plus } from 'lucide-react'
 import type { TasksSessionState } from '../../hooks/useTasksSession'
-import { checklistProgress, columnAtLimit, columnLoad, TASK_STATUSES } from '../../lib/taskModel'
+import { checklistProgress, columnAtLimit, columnLoad, isReviewColumn, TASK_STATUSES } from '../../lib/taskModel'
 import type { SuiteTask, TaskColumn, TaskStatus } from '../../types'
 import { columnAgentRefs, taskAgentRefs } from '../../agentRefs'
 import { CardChips } from './cardBits'
@@ -150,12 +150,13 @@ export function GlassBoardView({ session, callbacks }: { session: TasksSessionSt
     const title = draft.trim()
     if (!title) return
     if (columnAtLimit(session.store, status)) { onToast(`${session.columns.find(column => column.id === status)?.label ?? status} is at its limit.`); return }
-    await session.createTask(title, status)
-    setDraft('')
+    try { await session.createTask(title, status); setDraft('') }
+    catch (error) { onToast(error instanceof Error ? error.message : String(error)) }
   }
   function columnMenu(column: TaskColumn, item: string): void {
     if (item === 'rename') setEditing({ status: column.id, label: column.label })
     if (item === 'collapse') void session.patchColumn(column.id, { collapsed: !column.collapsed })
+    if (item === 'review') void session.patchColumn(column.id, { review: !isReviewColumn(column) }).catch(error => onToast(String(error)))
     if (item === 'done') void session.patchColumn(column.id, { done: !column.done })
     if (item === 'hide') void session.patchColumn(column.id, { hidden: true })
     if (item === 'left') { const index = session.columns.findIndex(candidate => candidate.id === column.id); const previous = session.columns[index - 1]; if (previous) void session.reorderColumn(column.id, previous.id) }
@@ -317,6 +318,7 @@ export function GlassBoardView({ session, callbacks }: { session: TasksSessionSt
           <MenuItem type="button" onClick={() => columnMenu(menuColumn, 'right')} disabled={session.columns[session.columns.length - 1]?.id === menuColumn.id}>Move right</MenuItem>
           <MenuItem type="button" onClick={() => columnMenu(menuColumn, 'collapse')}>{menuColumn.collapsed ? 'Expand' : 'Collapse'}</MenuItem>
           <MenuItem type="button" onClick={() => columnMenu(menuColumn, 'done')}>{menuColumn.done ? 'Not a done column' : 'Counts as done'}</MenuItem>
+          {!menuColumn.done ? <MenuItem type="button" onClick={() => columnMenu(menuColumn, 'review')}>{isReviewColumn(menuColumn) ? 'Exclude from review queue' : 'Include in review queue'}</MenuItem> : null}
           <MenuItem type="button" onClick={() => columnMenu(menuColumn, 'hide')}>Hide column</MenuItem>
           {!(TASK_STATUSES as readonly string[]).includes(menuColumn.id) && session.columns.length > 1 ? <MenuItem type="button" $tone="danger" onClick={() => columnMenu(menuColumn, 'delete')}>Delete column…</MenuItem> : null}
         </Popover>

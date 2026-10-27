@@ -213,6 +213,9 @@ export function cloneDefaultTaskColumns(): TaskColumn[] {
 
 export function normalizeTaskColumns(value: unknown): TaskColumn[] {
   const rawColumns = Array.isArray(value) ? value : []
+  // The original Personal preset reused the system Review id for a backlog.
+  // Preserve that established meaning without moving or renaming anyone's cards.
+  const legacyPersonal = rawColumns.length === 4 && [['doing', 'Today'], ['inbox', 'This week'], ['review', 'Someday'], ['done', 'Done']].every(([id, label]) => rawColumns.some(column => column?.id === id && column?.label === label))
   const seen = new Set<string>()
   const columns: TaskColumn[] = []
   for (const column of rawColumns) {
@@ -228,6 +231,7 @@ export function normalizeTaskColumns(value: unknown): TaskColumn[] {
       ...(candidate.collapsed ? { collapsed: true } : {}),
       ...(candidate.hidden ? { hidden: true } : {}),
       ...(candidate.done ? { done: true } : {}),
+      ...(typeof candidate.review === 'boolean' ? { review: candidate.review } : legacyPersonal && id === 'review' ? { review: false } : {}),
       ...(typeof candidate.wipLimit === 'number' && candidate.wipLimit > 0
         ? { wipLimit: Math.floor(candidate.wipLimit) }
         : {}),
@@ -240,6 +244,14 @@ export function normalizeTaskColumns(value: unknown): TaskColumn[] {
     }
   }
   return columns
+}
+
+export function isReviewColumn(column: TaskColumn): boolean {
+  return !column.done && (column.review ?? column.id === 'review')
+}
+
+export function isReviewStatus(store: TasksStore, status: string): boolean {
+  return taskColumnsForStore(store).some(column => column.id === status && isReviewColumn(column))
 }
 
 export function taskColumnsForStore(store: TasksStore): TaskColumn[] {

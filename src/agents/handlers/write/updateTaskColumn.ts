@@ -28,6 +28,7 @@ export async function updateTaskColumnHandler(
       collapsed: optionalBoolean(args, 'collapsed'),
       hidden: optionalBoolean(args, 'hidden'),
       done: optionalBoolean(args, 'done'),
+      review: optionalBoolean(args, 'review'),
       wipLimit: optionalNumber(args, 'wipLimit'),
     }),
   )
