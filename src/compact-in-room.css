@@ -1,0 +1,71 @@
+/* PureTasks held in a page (useCompactInRoom). The frame carries data-compact-room only then, and every rule here starts
+   from it, so with compact off nothing in this file applies. The top bar, the rail and the filters are hidden, not
+   removed: everything stays mounted, so state stays and the agent's tools keep working. Full app gives it all back. */
+
+[data-compact-room] > header,
+[data-compact-room] [data-compact='hide'] {
+  display: none;
+}
+
+/* One white sheet in the page's light, whatever the desk's theme: no frost, no panels, hairlines, square corners. */
+[data-compact-room] [data-compact='shell'] {
+  color-scheme: light;
+  --tasks-acc: oklch(0.47 0.11 250);
+  --tasks-acc-ink: oklch(0.4 0.11 250);
+  --tasks-panel: #ffffff;
+  --tasks-panel-strong: #ffffff;
+  --tasks-card: #ffffff;
+  --tasks-edge: #dde1e7;
+  --tasks-edge-strong: #c9ced6;
+  --tasks-line: #eef0f3;
+  --tasks-well: #f4f6f9;
+  --tasks-popover: #ffffff;
+  --tasks-blur: none;
+  --tasks-ink: #161d27;
+  --tasks-muted: #4f5866;
+  --tasks-faint: #79818e;
+  --tasks-ok-bg: #e1f1e8;
+  --tasks-ok-ink: #1d6b4b;
+  --tasks-warn-bg: #f8efdc;
+  --tasks-warn-ink: #8a5a12;
+  --tasks-bad-bg: #f9e3dd;
+  --tasks-bad-ink: #b23b27;
+  --tasks-info-bg: #e3edf6;
+  --tasks-info-ink: #24557a;
+  background: #ffffff;
+  color: var(--tasks-ink);
+}
+html[data-held-in-room]:has([data-compact-room]),
+html[data-held-in-room]:has([data-compact-room]) body {
+  background: #ffffff;
+}
+
+/* The board is the page: only it scrolls, sideways through the columns, each column down its own cards. */
+[data-compact-room] [data-compact='main'] {
+  padding: 0;
+  gap: 0;
+}
+[data-compact-room] [data-compact='main'] section {
+  width: 214px;
+  max-height: 100%;
+  padding: 8px 8px 8px;
+  border-width: 0 1px 0 0;
+  border-radius: 0;
+  border-color: var(--tasks-line);
+}
+[data-compact-room] [data-compact='main'] section:last-child {
+  border-right: 0;
+}
+[data-compact-room] [data-compact='main'] article {
+  border-radius: 3px;
+  box-shadow: none;
+  border-color: var(--tasks-edge);
+}
+[data-compact-room] [data-compact='shell'] button,
+[data-compact-room] [data-compact='shell'] input {
+  border-radius: 3px;
+}
+/* The Today place, on the same sheet. */
+[data-compact-room] [data-place='myDay'] [data-compact='main'] {
+  padding: 12px 8px 0 16px;
+}

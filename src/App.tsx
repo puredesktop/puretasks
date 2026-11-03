@@ -25,6 +25,7 @@ import {
 } from './constants'
 import type { TasksAgentBoardApi } from './agents/context'
 import { PureTasksShell } from './components/PureTasksShell'
+import { useCompactInRoom } from './hooks/useCompactInRoom'
 import { usePureTasksBoot } from './hooks/usePureTasksBoot'
 import { usePureTasksAgentTools } from './hooks/usePureTasksAgentTools'
 import { useTasksSession } from './hooks/useTasksSession'
@@ -127,6 +128,12 @@ function ReadyTasksApp({
   agentToolsReady: boolean
   bridgeMethods: readonly string[]
 }): React.ReactElement {
+  const compact = useCompactInRoom()
+  // lying flat in the page that holds it, on either kind of page: only while compact
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-held-in-room', compact)
+    return () => document.documentElement.removeAttribute('data-held-in-room')
+  }, [compact])
   const [uiSettings, setUiSettings] = useState(settings)
   const rememberUiSettings = useCallback((patch: Partial<TasksAppSettings>) => {
     setUiSettings(current => ({ ...current, ...patch }))
@@ -529,6 +536,7 @@ function ReadyTasksApp({
 
   return (
     <AppFrame
+      {...(compact ? { 'data-compact-room': '' } : undefined)}
       headerDocumentName={
         boardName?.trim() || (lifecycle.doc.path ? folderName(lifecycle.doc.path) : undefined)
       }
@@ -553,6 +561,7 @@ function ReadyTasksApp({
         onOpenBoard={openBoardWithTask}
         onNewBoard={template => void newBoard(undefined, template).catch(() => undefined)}
         initialOpenTaskId={openTaskRequest?.taskId ?? null}
+        compact={compact}
       />
       <DocumentSwitcher
         appSlug={TASKS_APP_SLUG}
