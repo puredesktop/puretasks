@@ -5,6 +5,7 @@ import {
   type PlatformDocumentListEntry,
 } from '@purescience/platform-ui/bridge/documents'
 import { TASK_PACKAGE_SUFFIX, TASKS_APP_SLUG } from '../constants'
+import type { LeasePort } from '../lib/keeperLease'
 import type {
   CatalogOpenRequest,
   PlatformAppSettingsUpdateRequest,
@@ -24,6 +25,26 @@ export interface PersonSuggestion {
 }
 
 const STANDALONE_SETTINGS_KEY = 'purescience:puretasks:settings'
+
+/** A small file in the shell's conditional JSON store, by which copies of the app settle who keeps the background work going (lib/keeperLease). */
+export const leasePort = (fileName: `${string}.json`): LeasePort => ({
+  read: async () => {
+    if (isStandaloneDevMode()) return { value: null, version: null }
+    const r = await bridge.call<{ value?: unknown; version?: string | null } | null>('storage.readJson' as never, [{ appSlug: TASKS_APP_SLUG, fileName }] as never)
+    return { value: r?.value ?? null, version: r?.version ?? null }
+  },
+  write: async (value, ifMatch) => {
+    if (isStandaloneDevMode()) return { ok: true, version: null }
+    const r = await bridge.call<{ ok?: boolean; version?: string | null } | null>('storage.writeJson' as never, [{ appSlug: TASKS_APP_SLUG, fileName, value, ifMatch }] as never)
+    return { ok: r?.ok === true, version: r?.version ?? null }
+  },
+})
+
+/** Whether this copy is held in a page, as the shell says. */
+export const askIfHeld = (): Promise<{ heldInRoom?: boolean } | null> => bridge.call<{ heldInRoom?: boolean } | null>('workspace.adjacentApp' as never)
+
+/** The shell is about to close this tab: a last chance to save. */
+export const onClosingTab = (then: () => void): (() => void) => bridge.onEvent('workspace.willClose' as never, then)
 
 export function isStandaloneDevMode(): boolean {
   return import.meta.env.DEV && window.parent === window

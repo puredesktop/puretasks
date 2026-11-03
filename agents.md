@@ -40,6 +40,13 @@ record IDs and any incomplete work in `taskOutcome`/`observations`. Do not copy 
 malformed upstream response or claim successful completion when a requirement failed.
 
 
+## Two copies
+
+A tab and a copy held in a page (a mini app) can both be open on one board. Your tools work the same in either, and
+nothing you do is lost to the other copy: a save merges card by card and field by field with what is on disk, and when
+both changed one field the later edit stands. One copy polls live assignments (`lib/keeperLease.ts`). None of these tools
+sends anything.
+
 ## Conduct
 
 - **Be professional and prompt.** Do the work now, in this turn. Never

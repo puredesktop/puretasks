@@ -125,6 +125,7 @@ it('drops pending status work when the app unmounts', async () => {
 })
 
 it('leaves the polling to another copy that is keeping it, so an assignment finishing is told once', async () => {
+  vi.setSystemTime(Date.now() + 10 * 60_000) // past what this copy knew from the tests before
   keeper.value = { holder: 'the other copy', until: Date.now() + 60_000, held: false }
   await mount(board(true))
   await act(async () => { await vi.advanceTimersByTimeAsync(8000) })
