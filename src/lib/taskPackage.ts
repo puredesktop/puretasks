@@ -30,6 +30,8 @@ export function taskPackageManifest(
 export function taskPackageContent(
   store: TasksStore,
   project: TaskProject,
+  /** What the document service checks at the write, so a copy working from an older file is refused. */
+  revision?: string,
 ): string {
   const taskIds = new Set(
     store.tasks
@@ -45,6 +47,7 @@ export function taskPackageContent(
       tasks: store.tasks.filter(task => task.projectId === project.id),
       activity: store.activity.filter(item => taskIds.has(item.taskId)),
       filterViews: store.filterViews ?? [],
+      ...(revision ? { revision } : {}),
     },
     null,
     2,
@@ -56,10 +59,11 @@ export function taskPackageFiles(
   store: TasksStore,
   project: TaskProject,
   savedAt: string,
+  revision?: string,
 ): Array<{ name: string; content: string }> {
   return [
     { name: TASK_PACKAGE_MANIFEST_FILE, content: taskPackageManifest(project, savedAt) },
-    { name: TASK_PACKAGE_CONTENT_FILE, content: taskPackageContent(store, project) },
+    { name: TASK_PACKAGE_CONTENT_FILE, content: taskPackageContent(store, project, revision) },
   ]
 }
 

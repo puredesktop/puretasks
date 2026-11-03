@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { catalogOpen, createMission as createShellMission, missionsAvailable, openMission as openShellMission, readMissionStatus, updateTasksSettings } from '../bridge/platformBridge'
+import { mayKeep } from '../lib/backgroundWork'
 import { missionBrief, missionLive, missionRecord, type MissionKind } from '../lib/missions'
 import {
   DEFAULT_FILTERS,
@@ -678,6 +679,9 @@ export function useTasksSession({
     const ids = [...new Set(live.map(entry => entry.mission.id))]
     const promise = (async () => {
       try {
+        // one copy polls: each that did would add its own line when an assignment finished
+        if (!(await mayKeep())) return
+        if (!isCurrent()) return
         const statuses = await mapConcurrent(ids, async id => ({ id, status: await readMissionStatus(id).catch(() => null) }), isCurrent)
         if (!isCurrent()) return
         const byId = new Map(statuses.map(entry => [entry.id, entry.status]))

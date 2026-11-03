@@ -12,9 +12,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import {
+  askIfHeld,
   deleteTaskBoard,
   isStandaloneDevMode,
   listTaskBoards,
+  onClosingTab,
   readTextFile,
   updateTasksSettings,
 } from './bridge/platformBridge'
@@ -25,9 +27,12 @@ import {
 } from './constants'
 import type { TasksAgentBoardApi } from './agents/context'
 import { PureTasksShell } from './components/PureTasksShell'
+import { useCompactInRoom } from './hooks/useCompactInRoom'
 import { usePureTasksBoot } from './hooks/usePureTasksBoot'
 import { usePureTasksAgentTools } from './hooks/usePureTasksAgentTools'
 import { useTasksSession } from './hooks/useTasksSession'
+import { BoardFile } from './lib/boardFile'
+import { findOutIfHeld, isHeldCopy, listenForHeld } from './lib/heldCopy'
 import { starterBoardStore } from './lib/taskModel'
 import { useBoardsIndex } from './hooks/useBoardsIndex'
 import type { BOARD_TEMPLATES } from './components/glass/BoardsHome'
@@ -36,6 +41,9 @@ import { parseTaskPackageStore, taskPackageContent, taskPackageFiles } from './l
 import type { TasksAppSettings, TasksStore } from './types'
 
 const NEW_BOARD_NAME = 'Untitled board'
+/** How long after a change it saves, and how often it looks for what another copy saved. */
+const SAVE_AFTER_MS = 1_200
+const LOOK_EVERY_MS = 15_000
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -127,6 +135,14 @@ function ReadyTasksApp({
   agentToolsReady: boolean
   bridgeMethods: readonly string[]
 }): React.ReactElement {
+  const compact = useCompactInRoom()
+  // lying flat in the page that holds it, on either kind of page: only while compact
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-held-in-room', compact)
+    return () => document.documentElement.removeAttribute('data-held-in-room')
+  }, [compact])
+  // a second copy, from the moment the shell says so and for good: Full app does not make it the only one
+  useEffect(() => { if (!isStandaloneDevMode()) void findOutIfHeld(() => askIfHeld()); return listenForHeld() }, [])
   const [uiSettings, setUiSettings] = useState(settings)
   const rememberUiSettings = useCallback((patch: Partial<TasksAppSettings>) => {
     setUiSettings(current => ({ ...current, ...patch }))
@@ -151,23 +167,40 @@ function ReadyTasksApp({
   const taskRequestSequence = useRef(0)
   const [boardViewRevision, setBoardViewRevision] = useState(0)
 
+  // What BoardFile has handed over to be written; what went into the last write.
+  const handing = useRef<{ store: TasksStore; revision: string; expected: string | null } | null>(null)
+  const serialized = useRef<{ store: TasksStore; revision: string } | null>(null)
+  const fileRef = useRef<BoardFile | null>(null)
+  // A board nobody has touched gets no draft.
+  const touched = useRef(false)
+
   const lifecycle = useDocumentLifecycle({
     appSlug: TASKS_APP_SLUG,
     suffix: TASK_PACKAGE_SUFFIX,
     kind: 'package',
     suggestedTitle: boardName,
     serialize: () => {
-      const boardStore = boundStoreRef.current
-      const project = boardStore.projects[0]
-      if (!project) return []
-      return taskPackageFiles(boardStore, project, nowIso())
+      // The lifecycle also writes on its own as a tab hides or closes. With nothing to save it writes nothing, so a copy
+      // that has done nothing never rewrites the file; with something, the revision below refuses it if the file has moved on.
+      if (!handing.current && boundPathRef.current && fileRef.current && !fileRef.current.unsaved) { serialized.current = null; return [] }
+      const store = handing.current?.store ?? boundStoreRef.current
+      const project = store.projects[0]
+      if (!project) { serialized.current = null; return [] }
+      const revision = handing.current?.revision ?? crypto.randomUUID()
+      serialized.current = { store, revision }
+      return taskPackageFiles(store, project, nowIso(), revision)
     },
-    // Another app or tab wrote this package (PureFiles, a mission, another
-    // PureTasks window). Reload when this editor is clean; when it has
-    // unsaved edits its own autosave is about to land, so those win.
-    onExternalChange: ({ path, dirty }) => {
-      if (dirty) return
-      void reloadBoardRef.current(path)
+    // the check only when something is being written: a write of nothing must never be refused
+    revision: () => (serialized.current ? { file: TASK_PACKAGE_CONTENT_FILE, field: 'revision', expected: handing.current ? handing.current.expected : fileRef.current?.revision ?? null } : undefined) as never,
+    onSaved: () => {
+      const wrote = serialized.current
+      if (wrote && !handing.current) fileRef.current?.wrote(wrote.store, wrote.revision)
+    },
+    // Another app or tab wrote this package (PureFiles, a mission, another copy of PureTasks): taken in, with what this
+    // copy has not saved kept on top.
+    onExternalChange: ({ path }) => {
+      if (liveRef.current?.status === 'on' || path.replace(/\/+$/, '') !== boundPathRef.current) return
+      void fileRef.current?.pickUp()
     },
   })
   const lifecycleRef = useRef(lifecycle)
@@ -187,9 +220,11 @@ function ReadyTasksApp({
       liveRef.current.write(JSON.parse(taskPackageContent(next, project)) as Record<string, unknown>)
       return
     }
-    lifecycleRef.current.markDirty()
+    touched.current = true
+    saveSoonRef.current()
   }, [])
   const liveRef = useRef<ReturnType<typeof useLiveJson> | null>(null)
+  const saveSoonRef = useRef<() => void>(() => undefined)
 
   const session = useTasksSession({
     initialStore: boundStoreRef.current,
@@ -202,6 +237,67 @@ function ReadyTasksApp({
   useEffect(() => {
     sessionRef.current = session
   }, [session])
+
+  // Saving: BoardFile merges with what is on disk and writes only if that is still there; the lifecycle does the writing.
+  if (!fileRef.current) {
+    fileRef.current = new BoardFile(
+      {
+        readStore: () => sessionRef.current.readStore(),
+        takeIn: next => {
+          boundStoreRef.current = next
+          setBoardName(next.projects[0]?.name ?? NEW_BOARD_NAME)
+          sessionRef.current.replaceStore(next, { keepSelection: true, keepBoard: true })
+        },
+      },
+      {
+        read: async () => (boundPathRef.current ? readTextFile(boardContentPath(boundPathRef.current)) : null),
+        write: async (store, revision, expected) => {
+          handing.current = { store, revision, expected }
+          try { await lifecycleRef.current.flush({ throwOnError: true }) } finally { handing.current = null }
+        },
+      },
+    )
+  }
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveNow = useCallback(async (): Promise<void> => {
+    if (saveTimer.current !== null) { clearTimeout(saveTimer.current); saveTimer.current = null }
+    if (liveRef.current?.status === 'on') return
+    if (!boundPathRef.current) {
+      if (!touched.current) return
+      const path = await lifecycleRef.current.ensureDraft()
+      if (!path) return
+      boundPathRef.current = path
+    }
+    if (fileRef.current?.unsaved) await fileRef.current.save()
+  }, [])
+  const saveSoon = useCallback((): void => {
+    if (saveTimer.current !== null) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => { void saveNow().catch(() => saveSoonRef.current()) }, SAVE_AFTER_MS)
+  }, [saveNow])
+  saveSoonRef.current = saveSoon
+
+  // What another copy saved comes in: when it says so, when this one is looked at again, and every so often.
+  useEffect(() => {
+    if (isStandaloneDevMode()) return
+    const look = (): void => {
+      if (liveRef.current?.status !== 'on' && boundPathRef.current && document.visibilityState === 'visible') void fileRef.current?.pickUp()
+    }
+    const hidden = (): void => { if (document.visibilityState === 'hidden') void saveNow().catch(() => undefined) }
+    const every = window.setInterval(look, LOOK_EVERY_MS)
+    window.addEventListener('focus', look)
+    document.addEventListener('visibilitychange', look)
+    document.addEventListener('visibilitychange', hidden)
+    window.addEventListener('beforeunload', hidden)
+    const unclose = onClosingTab(() => { void saveNow().catch(() => undefined) })
+    return () => {
+      window.clearInterval(every)
+      window.removeEventListener('focus', look)
+      document.removeEventListener('visibilitychange', look)
+      document.removeEventListener('visibilitychange', hidden)
+      window.removeEventListener('beforeunload', hidden)
+      unclose()
+    }
+  }, [saveNow])
 
   // A board the organisation shares, edited live (useLiveJson): everyone's cards, columns and moves merged card by
   // card; the live copy writes the package, so this tab stops writing it itself while live.
@@ -225,18 +321,25 @@ function ReadyTasksApp({
       return { resourcePath: path, files: taskPackageFiles(boundStoreRef.current, project, nowIso()) }
     },
     // Let go by the live copy: what is on screen is saved as the board always was.
-    onEnded: () => lifecycleRef.current.markDirty(),
+    onEnded: () => saveSoonRef.current(),
   })
   liveRef.current = live
 
+  // A copy held in a page shows the board it was given: that does not change which one the app comes back to.
+  const rememberBoard = useCallback((path: string) => {
+    if (!isHeldCopy()) void updateTasksSettings({ lastBoardPath: path }).catch(() => undefined)
+  }, [])
+
   // Lifecycle-owned path changes (lazy draft, promote, rename) → remember it.
+  const rememberedPath = useRef<string | null>(null)
   useEffect(() => {
     const path = lifecycle.doc.path
-    if (!path || boundPathRef.current === path) return
-    boundPathRef.current = path
+    if (path) boundPathRef.current = path
+    if (!path || rememberedPath.current === path) return
+    rememberedPath.current = path
     lastResourceRef.current = path
-    void updateTasksSettings({ lastBoardPath: path }).catch(() => undefined)
-  }, [lifecycle.doc.path])
+    rememberBoard(path)
+  }, [lifecycle.doc.path, rememberBoard])
 
   const readBoard = useCallback(async (packagePath: string) => {
     return parseTaskPackageStore(
@@ -262,12 +365,15 @@ function ReadyTasksApp({
       }
       const generation = ++openGeneration.current
       const lifecycle = lifecycleRef.current
+      await saveNow()
       await lifecycle.flush({ throwOnError: true })
       if (generation !== openGeneration.current)
         throw new Error('Board open superseded.')
       let boardStore: TasksStore
+      let boardText: string
       try {
-        boardStore = await readBoard(clean)
+        boardText = await readTextFile(boardContentPath(clean))
+        boardStore = parseTaskPackageStore(boardText)
         if (generation !== openGeneration.current)
           throw new Error('Board open superseded.')
       } catch (error) {
@@ -281,15 +387,18 @@ function ReadyTasksApp({
       boundStoreRef.current = boardStore
       boundPathRef.current = clean
       lastResourceRef.current = clean
+      rememberedPath.current = clean
+      touched.current = false
+      fileRef.current?.opened(boardText)
       setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME)
       sessionRef.current.replaceStore(boardStore)
       setBoardViewRevision(value => value + 1)
       lifecycle.adopt(clean)
       setSwitcherOpen(false)
-      void updateTasksSettings({ lastBoardPath: clean }).catch(() => undefined)
+      rememberBoard(clean)
       revealTask()
     },
-    [readBoard],
+    [rememberBoard, saveNow],
   )
   const openBoardWithTask = useCallback((path: string, taskId?: string) => {
     setUiSettings(current => ({ ...current, place: 'board' }))
@@ -297,34 +406,10 @@ function ReadyTasksApp({
     void openBoard(path, taskId).catch(() => undefined)
   }, [openBoard])
 
-  // Re-read the bound package after an external write, keeping selection.
-  const reloadBoard = useCallback(
-    async (packagePath: string): Promise<void> => {
-      const clean = packagePath.replace(/\/+$/, '')
-      if (boundPathRef.current !== clean) return
-      const generation = ++openGeneration.current
-      try {
-        const boardStore = await readBoard(clean)
-        if (
-          generation !== openGeneration.current ||
-          boundPathRef.current !== clean
-        )
-          return
-        boundStoreRef.current = boardStore
-        setBoardName(boardStore.projects[0]?.name ?? NEW_BOARD_NAME)
-        sessionRef.current.replaceStore(boardStore, { keepSelection: true })
-      } catch {
-        // The package is mid-write or gone; the next change event retries.
-      }
-    },
-    [readBoard],
-  )
-  const reloadBoardRef = useRef(reloadBoard)
-  reloadBoardRef.current = reloadBoard
-
   const newBoard = useCallback(async (name?: string, template?: (typeof BOARD_TEMPLATES)[number]): Promise<void> => {
     const generation = ++openGeneration.current
     const lifecycle = lifecycleRef.current
+    await saveNow()
     await lifecycle.flush({ throwOnError: true })
     if (generation !== openGeneration.current)
       throw new Error('New board superseded.')
@@ -334,6 +419,8 @@ function ReadyTasksApp({
     boundStoreRef.current = boardStore
     boundPathRef.current = null
     lastResourceRef.current = null
+    touched.current = false
+    fileRef.current?.opened(null)
     setOpenError(null)
     setOpenTaskRequest(null)
     // Commit the name synchronously: the lifecycle names the lazily-created
@@ -347,7 +434,7 @@ function ReadyTasksApp({
     setBoardViewRevision(value => value + 1)
     lifecycle.reset()
     setSwitcherOpen(false)
-  }, [])
+  }, [saveNow])
 
   // Boot: bound resource → last board → fresh starter.
   const bootedRef = useRef(false)
@@ -390,8 +477,9 @@ function ReadyTasksApp({
     const lifecycle = lifecycleRef.current
     const path = await lifecycle.ensureDraft()
     if (!path) throw new Error('Could not create a board draft.')
-    await lifecycle.flush({ throwOnError: true })
-  }, [])
+    touched.current = true
+    await saveNow()
+  }, [saveNow])
 
   useDocumentHotkeys({
     onSave: () => void saveBoard().catch(() => undefined),
@@ -529,6 +617,7 @@ function ReadyTasksApp({
 
   return (
     <AppFrame
+      {...(compact ? { 'data-compact-room': '' } : undefined)}
       headerDocumentName={
         boardName?.trim() || (lifecycle.doc.path ? folderName(lifecycle.doc.path) : undefined)
       }
@@ -553,6 +642,7 @@ function ReadyTasksApp({
         onOpenBoard={openBoardWithTask}
         onNewBoard={template => void newBoard(undefined, template).catch(() => undefined)}
         initialOpenTaskId={openTaskRequest?.taskId ?? null}
+        compact={compact}
       />
       <DocumentSwitcher
         appSlug={TASKS_APP_SLUG}

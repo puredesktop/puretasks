@@ -7,6 +7,7 @@ import { updateTasksSettings } from '../bridge/platformBridge'
 import { dueBucket, isBlocked, isReviewStatus } from '../lib/taskModel'
 import type { TasksAppSettings, TasksPlace } from '../types'
 import { useAppearance } from '../hooks/useAppearance'
+import { compactPart } from '../hooks/useCompactInRoom'
 import { BoardsHome, type BOARD_TEMPLATES } from './glass/BoardsHome'
 import { FilterBar, type GroupBy, type Swimlanes } from './glass/FilterBar'
 import { GlassBoardView } from './glass/GlassBoardView'
@@ -17,6 +18,7 @@ import { TaskCardOverlay } from './glass/TaskCardOverlay'
 import { TaskPeek } from './glass/TaskPeek'
 import { TasksRail } from './glass/TasksRail'
 import { TasksTopBar } from './glass/TasksTopBar'
+import { MiniBar, type MiniPlace } from './glass/MiniBar'
 import { QuickCapture } from './glass/QuickCapture'
 import { boardAgentRefs } from '../agentRefs'
 import { GlassActivityView } from './glass/GlassActivityView'
@@ -40,10 +42,16 @@ interface PureTasksShellProps {
   onNewBoard: (template: (typeof BOARD_TEMPLATES)[number]) => void
   /** A card to open straight away (a board opened for one of its cards). */
   initialOpenTaskId?: string | null
+  /** Held in a page: the mini app's bar over the board, the rest hidden and still mounted. */
+  compact?: boolean
 }
 
-export function PureTasksShell({ session, board, boards, boardsLoading, boardsError, onRetryBoards, settings, onSettingsChange, onOpenBoard, onNewBoard, initialOpenTaskId }: PureTasksShellProps): React.ReactElement {
-  const [place, setPlaceState] = useState<TasksPlace>(settings.place ?? 'board')
+export function PureTasksShell({ session, board, boards, boardsLoading, boardsError, onRetryBoards, settings, onSettingsChange, onOpenBoard, onNewBoard, initialOpenTaskId, compact = false }: PureTasksShellProps): React.ReactElement {
+  const [wholePlace, setPlaceState] = useState<TasksPlace>(settings.place ?? 'board')
+  // held in a page: the board, or today's work, whatever the full app was last left on (which it still comes back to)
+  const [miniPlace, setMiniPlace] = useState<MiniPlace>('board')
+  const place: TasksPlace = compact ? miniPlace : wholePlace
+  const viewMode = compact ? 'board' : session.viewMode
   const [groupBy, setGroupByState] = useState<GroupBy>(settings.groupBy ?? 'none')
   const [swimlanes, setSwimlanesState] = useState<Swimlanes>(settings.swimlanes ?? 'none')
   const [myDay, setMyDayState] = useState<Record<string, string[]>>(settings.myDay ?? {})
@@ -77,7 +85,7 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
     toastTimer.current = setTimeout(() => setToast(null), 2600)
   }, [])
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current) }, [])
-  const setPlace = useCallback((next: TasksPlace) => { setPlaceState(next); setPeek(null); setSelection(new Set()); void saveSettings({ place: next }).catch(() => undefined) }, [saveSettings])
+  const setPlace = useCallback((next: TasksPlace) => { if (compact) { setMiniPlace(next === 'myDay' ? 'myDay' : 'board'); setPeek(null); return } setPlaceState(next); setPeek(null); setSelection(new Set()); void saveSettings({ place: next }).catch(() => undefined) }, [compact, saveSettings])
 
   useEffect(() => {
     setPeek(null)
@@ -142,7 +150,11 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
     return () => window.removeEventListener('keydown', onKey)
   })
 
-  function newTask(): void { setCapturing(true) }
+  function newTask(): void {
+    // held in a page, the line to add a card is always there
+    if (compact) document.querySelector<HTMLInputElement>('[aria-label^="Add a card to"]')?.focus()
+    else setCapturing(true)
+  }
 
   const cross = useMemo(() => crossBoardTasks(boards, board.path).filter(entry => !entry.done), [boards, board.path])
   const counts = useMemo(() => ({
@@ -166,20 +178,23 @@ export function PureTasksShell({ session, board, boards, boardsLoading, boardsEr
   const openRef = openTask_ && board.path ? `${board.path.replace(/\/+$/, '')}#${openTask_.id}` : null
 
   return (
-    <GlassShell data-place={place} data-appearance={appearance}>
+    <GlassShell data-place={place} data-appearance={appearance} {...compactPart(compact, 'shell')}>
+      {compact ? <MiniBar session={session} boardName={board.title} place={miniPlace} onPlace={setMiniPlace} todayCount={counts.myDay} /> : null}
+      <div style={{ display: 'contents' }} {...compactPart(compact, 'hide')}>
       <TasksTopBar session={session} place={place} railOpen={railOpen} onToggleRail={toggleRail} boardName={board.title} onOpenSwitcher={board.openSwitcher} onNewTask={() => void newTask()} searchRef={searchRef} />
       {capturing ? <QuickCapture key={session.activeProject.id} session={session} boardName={board.title} onClose={() => setCapturing(false)} onCreated={id => { setCapturing(false); openTask(id) }} /> : null}
+      </div>
       <Body onMouseDown={() => { if (peek) setPeek(null) }}>
-        {railOpen ? <TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} /> : null}
-        <Main {...(place === 'board' ? boardAgentRefs({ path: board.path, projectId: session.activeProject.id, name: board.title, open: true }) : {})}>
+        {railOpen ? <div style={{ display: 'contents' }} {...compactPart(compact, 'hide')}><TasksRail place={place} boards={boards} openPath={board.path} counts={counts} onPlace={setPlace} onOpenBoard={path => { setPlace('board'); if (path !== board.path) onOpenBoard(path) }} /></div> : null}
+        <Main {...compactPart(compact, 'main')} {...(place === 'board' ? boardAgentRefs({ path: board.path, projectId: session.activeProject.id, name: board.title, open: true }) : {})}>
           {place === 'board' ? (
             <>
-              <FilterBar session={session} groupBy={groupBy} swimlanes={swimlanes} onGroupBy={setGroupBy} onSwimlanes={setSwimlanes} selection={selection} onClearSelection={() => setSelection(new Set())} onToast={onToast} summary={summary} />
-              {session.viewMode === 'board' ? <GlassBoardView session={session} callbacks={{ onOpenTask: openTask, onPeek: (taskId, rect) => setPeek({ taskId, rect }), onDragBegin: () => setPeek(null), selection, onToggleSelect: toggleSelect, onToast, swimlanes }} /> : null}
-              {session.viewMode === 'list' ? <GlassListView session={session} groupBy={groupBy} onOpenTask={openTask} /> : null}
-              {session.viewMode === 'calendar' ? <GlassCalendarView session={session} onOpenTask={openTask} /> : null}
-              {session.viewMode === 'timeline' ? <GlassTimelineView session={session} onOpenTask={openTask} /> : null}
-              {session.viewMode === 'activity' || session.viewMode === 'files' ? <GlassActivityView session={session} onOpenTask={openTask} /> : null}
+              <div style={{ display: 'contents' }} {...compactPart(compact, 'hide')}><FilterBar session={session} groupBy={groupBy} swimlanes={swimlanes} onGroupBy={setGroupBy} onSwimlanes={setSwimlanes} selection={selection} onClearSelection={() => setSelection(new Set())} onToast={onToast} summary={summary} /></div>
+              {viewMode === 'board' ? <GlassBoardView session={session} callbacks={{ onOpenTask: openTask, onPeek: (taskId, rect) => setPeek({ taskId, rect }), onDragBegin: () => setPeek(null), selection, onToggleSelect: toggleSelect, onToast, swimlanes }} /> : null}
+              {viewMode === 'list' ? <GlassListView session={session} groupBy={groupBy} onOpenTask={openTask} /> : null}
+              {viewMode === 'calendar' ? <GlassCalendarView session={session} onOpenTask={openTask} /> : null}
+              {viewMode === 'timeline' ? <GlassTimelineView session={session} onOpenTask={openTask} /> : null}
+              {viewMode === 'activity' || viewMode === 'files' ? <GlassActivityView session={session} onOpenTask={openTask} /> : null}
             </>
           ) : null}
           {place !== 'board' && place !== 'boards' && (boardsLoading || boardsError || boards.some(entry => entry.error)) ? <div role={boardsError || boards.some(entry => entry.error) ? 'alert' : 'status'} style={{ padding: '8px 0', fontSize: 12 }}>

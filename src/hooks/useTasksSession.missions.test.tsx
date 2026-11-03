@@ -5,11 +5,17 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createTask, starterBoardStore } from '../lib/taskModel'
 import { deferred } from '../test/deferred'
 import type { TasksStore } from '../types'
+const keeper = vi.hoisted(() => ({
+  value: null as unknown,
+  read: async () => ({ value: keeper.value, version: 'v' }),
+  write: async (value: unknown) => { keeper.value = value; return { ok: true, version: 'v' } },
+}))
 const createMission = vi.fn()
 const readMissionStatus = vi.fn()
 vi.mock('../bridge/platformBridge', () => ({
   updateTasksSettings: async () => ({}), catalogOpen: async () => undefined,
   missionsAvailable: () => true, createMission, readMissionStatus, openMission: async () => undefined,
+  leasePort: () => keeper,
 }))
 const { useTasksSession } = await import('./useTasksSession')
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -116,4 +122,13 @@ it('drops pending status work when the app unmounts', async () => {
   await act(async () => root.unmount())
   await act(async () => { gate.resolve({ phase: 'done' }); await pending })
   expect(mutations).toHaveLength(0)
+})
+
+it('leaves the polling to another copy that is keeping it, so an assignment finishing is told once', async () => {
+  vi.setSystemTime(Date.now() + 10 * 60_000) // past what this copy knew from the tests before
+  keeper.value = { holder: 'the other copy', until: Date.now() + 60_000, held: false }
+  await mount(board(true))
+  await act(async () => { await vi.advanceTimersByTimeAsync(8000) })
+  expect(readMissionStatus).not.toHaveBeenCalled()
+  keeper.value = null
 })

@@ -37,7 +37,7 @@ vi.mock('./hooks/usePureTasksAgentTools', () => ({ usePureTasksAgentTools: () =>
 vi.mock('./hooks/useBoardsIndex', () => ({ useBoardsIndex: () => ({ boards: [], loading: false, error: null, refresh }) }))
 vi.mock('./components/PureTasksShell', () => ({ PureTasksShell: (props: typeof latest) => { latest = props; useEffect(() => { mountedShells++ }, []); return <div>{props.board.title}:{props.initialOpenTaskId}</div> } }))
 vi.mock('./bridge/platformBridge', () => ({
-  isStandaloneDevMode: () => false, readTextFile, listTaskBoards: async () => [], deleteTaskBoard: async () => undefined,
+  isStandaloneDevMode: () => false, askIfHeld: async () => null, onClosingTab: () => () => undefined, readTextFile, listTaskBoards: async () => [], deleteTaskBoard: async () => undefined,
   updateTasksSettings: async () => ({}), missionsAvailable: () => false, catalogOpen: async () => undefined,
 }))
 const { App } = await import('./App')
