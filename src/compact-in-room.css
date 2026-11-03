@@ -4,7 +4,8 @@
 
 [data-compact-room] > header,
 [data-compact-room] [data-compact='hide'] {
-  display: none;
+  /* over the parts' own inline display: contents */
+  display: none !important;
 }
 
 /* One white sheet in the page's light, whatever the desk's theme: no frost, no panels, hairlines, square corners. */
