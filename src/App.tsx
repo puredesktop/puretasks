@@ -5,6 +5,7 @@ import { usePlatformViewportResource } from '@purescience/platform-ui/bridge/rea
 import { useDocumentLifecycle } from '@purescience/platform-ui/bridge/react/useDocumentLifecycle'
 import { useDocumentHotkeys } from '@purescience/platform-ui/bridge/react/useDocumentHotkeys'
 import { useLiveJson } from '@purescience/platform-ui/editing/live/useLiveJson'
+import { useHeldCommand } from '@purescience/platform-ui/bridge/react/heldCommand'
 import {
   DocumentHeaderActions,
   DocumentSwitcher,
@@ -33,7 +34,7 @@ import { usePureTasksAgentTools } from './hooks/usePureTasksAgentTools'
 import { useTasksSession } from './hooks/useTasksSession'
 import { BoardFile } from './lib/boardFile'
 import { findOutIfHeld, isHeldCopy, listenForHeld } from './lib/heldCopy'
-import { starterBoardStore } from './lib/taskModel'
+import { starterBoardStore, taskColumnsForStore } from './lib/taskModel'
 import { useBoardsIndex } from './hooks/useBoardsIndex'
 import type { BOARD_TEMPLATES } from './components/glass/BoardsHome'
 import { tasksSnapshotHtml } from './lib/tasksSnapshot'
@@ -438,10 +439,12 @@ function ReadyTasksApp({
 
   // Boot: bound resource → last board → fresh starter.
   const bootedRef = useRef(false)
+  // Settles when the board this copy was given (or the one it comes back to) has been read, so a command waits for it.
+  const bootSettled = useRef<Promise<void>>(Promise.resolve())
   useEffect(() => {
     if (bootedRef.current) return
     bootedRef.current = true
-    void (async () => {
+    bootSettled.current = (async () => {
       const bootPath = bootResourcePath?.trim()
       if (bootPath?.replace(/\/+$/, '').endsWith(TASK_PACKAGE_SUFFIX)) {
         await openBoard(bootPath).catch(() => undefined)
@@ -461,6 +464,27 @@ function ReadyTasksApp({
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Told by the page holding this copy: add a card to the board that is open, the way the quick add box does. It never
+  // makes a board of its own, so with none open it says so.
+  useHeldCommand(async (command, text) => {
+    if (command !== 'add') return { ok: false, say: 'Tasks can’t do that.' }
+    const title = text.trim()
+    if (!title) return { ok: false, say: 'Say what to add, like: Write the plan by Friday.' }
+    await bootSettled.current
+    if (!boundPathRef.current && !touched.current) return { ok: false, say: 'There’s no board open here to add to. Open or make one in Tasks first.' }
+    const current = sessionRef.current
+    const columns = taskColumnsForStore(current.readStore())
+    const column = columns.find(each => each.id === 'inbox') ?? columns.find(each => !each.done)
+    if (!column) return { ok: false, say: 'This board has no column to add a task to.' }
+    try {
+      const id = await current.createTask(title, column.id)
+      if (!id || !sessionRef.current.readStore().tasks.some(task => task.id === id)) return { ok: false, say: 'The task wasn’t added. Try again.' }
+    } catch (failure) {
+      return { ok: false, say: failure instanceof Error ? failure.message : String(failure) }
+    }
+    return { ok: true, say: `Added “${title}” to ${boundStoreRef.current.projects[0]?.name ?? boardName}, in ${column.label}.` }
+  })
 
   // Warm `resource.open` — a `.tasks` package opened from PureFiles.
   useEffect(() => {
