@@ -33,12 +33,21 @@
   --tasks-bad-ink: #b23b27;
   --tasks-info-bg: #e3edf6;
   --tasks-info-ink: #24557a;
-  background: #ffffff;
+  --canvas: #ffffff;
+  --platform-colors-bg: #ffffff;
+  --platform-colors-surface: #ffffff;
+  --platform-colors-surface-hover: #f5f6f8;
+  --pure-chrome-bar: #ffffff;
+  --pure-chrome-accent: #2f5d8c;
+  --tasks-acc: #2f5d8c;
+  --tasks-acc-ink: #24496f;
+  background: #ffffff !important; /* the white appearance sets the page's ground with !important */
   color: var(--tasks-ink);
 }
-html[data-held-in-room]:has([data-compact-room]),
-html[data-held-in-room]:has([data-compact-room]) body {
-  background: #ffffff;
+html:has([data-compact-room]),
+html:has([data-compact-room]):root[data-platform-appearance] body,
+html:has([data-compact-room]) body {
+  background: #ffffff !important;
 }
 
 /* The board is the page: only it scrolls, sideways through the columns, each column down its own cards. */
@@ -47,7 +56,9 @@ html[data-held-in-room]:has([data-compact-room]) body {
   gap: 0;
 }
 [data-compact-room] [data-compact='main'] section {
-  width: 214px;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 128px; /* the columns share the width: nothing is cut off at the frame's edge */
   max-height: 100%;
   padding: 8px 8px 8px;
   border-width: 0 1px 0 0;
@@ -69,4 +80,45 @@ html[data-held-in-room]:has([data-compact-room]) body {
 /* The Today place, on the same sheet. */
 [data-compact-room] [data-place='myDay'] [data-compact='main'] {
   padding: 12px 8px 0 16px;
+}
+
+/* The held look: 13px sans type, headings at most 15px, hairlines instead of dashes, 3px corners, flat controls. */
+[data-compact-room] [data-compact='shell'] {
+  --platform-typography-font-family-mono: var(--platform-typography-font-family, inherit);
+  font-size: 13px;
+}
+[data-compact-room] [data-compact='shell'] h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+[data-compact-room] [data-compact='shell'] span:not(:empty),
+[data-compact-room] [data-compact='shell'] button,
+[data-compact-room] [data-compact='shell'] input,
+[data-compact-room] [data-compact='shell'] article {
+  border-radius: 3px;
+  font-variant-numeric: tabular-nums;
+}
+[data-compact-room] [data-compact='shell'] span:not(:empty),
+[data-compact-room] [data-compact='shell'] article,
+[data-compact-room] [data-compact='main'] > div > :not(section),
+[data-compact-room] [data-compact='main'] div[aria-hidden='true'] {
+  box-shadow: none;
+}
+[data-compact-room] [data-compact='main'] div[aria-hidden='true'] {
+  border-radius: 3px;
+}
+[data-compact-room] [data-compact='main'] section button {
+  border-style: solid;
+  border-color: var(--tasks-edge);
+}
+[data-compact-room] [data-compact='main'] section > div > button,
+[data-compact-room] [data-compact='main'] > div > :not(section) {
+  border-style: solid;
+  border-color: var(--tasks-edge);
+  border-radius: 3px;
+}
+[data-compact-room] [data-compact='main'] > div > :not(section) {
+  flex: 1 1 0;
+  min-width: 96px;
 }
