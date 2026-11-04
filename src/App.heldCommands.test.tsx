@@ -115,3 +115,21 @@ it('says why when the board will not take it', async () => {
   expect(answer.ok).toBe(false)
   expect(answer.say).toMatch(/at its limit/)
 })
+
+it('takes a meeting’s actions as tasks, and can take them back', async () => {
+  await start()
+  const answer = await tell('take', JSON.stringify({ kind: 'actions', items: [{ title: 'Call Dana', owner: 'Sam' }, { title: 'Send pack', due: 'Fri' }] })) as unknown as { ok: boolean; say: string; undo: string }
+  expect(answer.ok).toBe(true)
+  expect(answer.say).toContain('2 tasks')
+  expect(titles()).toEqual(expect.arrayContaining(['Call Dana (Sam)', 'Send pack (by Fri)']))
+  const back = await tell('undo', answer.undo) as unknown as { ok: boolean; say: string }
+  expect(back.ok).toBe(true)
+  expect(titles()).not.toContain('Call Dana (Sam)')
+  expect((await tell('undo', answer.undo) as unknown as { say: string }).say).toContain('already')
+})
+
+it('takes nothing when there is nothing to take', async () => {
+  await start()
+  expect(await tell('take', JSON.stringify({ kind: 'file', path: '/x' }))).toMatchObject({ ok: false })
+  expect(await tell('take', 'junk')).toMatchObject({ ok: false })
+})
