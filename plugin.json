@@ -18,6 +18,9 @@
     "productName": "pure.puretasks",
     "kind": "tasks",
     "description": "Track project work, review queues, and linked suite resources.",
+    "commands": [
+      {"trigger": "/task", "command": "add", "description": "Add a task", "takesText": true, "needsText": true, "textHint": "Write the plan by Friday", "help": {"says": "Adds one task to your open board, or your default one, and says where it went.", "example": "/task Write the plan by Friday"}}
+    ],
     "usePureDesktopAiPanel": true,
     "brand": {
       "letter": "t",
