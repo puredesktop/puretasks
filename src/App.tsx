@@ -34,6 +34,7 @@ import { usePureTasksAgentTools } from './hooks/usePureTasksAgentTools'
 import { useTasksSession } from './hooks/useTasksSession'
 import { BoardFile } from './lib/boardFile'
 import { findOutIfHeld, isHeldCopy, listenForHeld } from './lib/heldCopy'
+import { titlesTaken } from './lib/taken'
 import { starterBoardStore, taskColumnsForStore } from './lib/taskModel'
 import { useBoardsIndex } from './hooks/useBoardsIndex'
 import type { BOARD_TEMPLATES } from './components/glass/BoardsHome'
@@ -467,7 +468,32 @@ function ReadyTasksApp({
 
   // Told by the page holding this copy: add a card to the board that is open, the way the quick add box does. It never
   // makes a board of its own, so with none open it says so.
+  const lastAdded = useRef<string | null>(null)
   useHeldCommand(async (command, text) => {
+    if (command === 'take') {
+      const titles = titlesTaken(text)
+      if (!titles.length) return { ok: false, say: 'There’s nothing there to make a task of.' }
+      await bootSettled.current
+      if (!boundPathRef.current && !touched.current) return { ok: false, say: 'There’s no board open here to add to. Open or make one in Tasks first.' }
+      const session = sessionRef.current
+      const columns = taskColumnsForStore(session.readStore())
+      const column = columns.find(each => each.id === 'inbox') ?? columns.find(each => !each.done)
+      if (!column) return { ok: false, say: 'This board has no column to add a task to.' }
+      const ids: string[] = []
+      for (const each of titles) {
+        const id = await session.createTask(each, column.id)
+        if (id) ids.push(id)
+      }
+      return ids.length
+        ? { ok: true, say: `Added ${ids.length === 1 ? 'a task' : `${ids.length} tasks`} to ${boundStoreRef.current.projects[0]?.name ?? boardName}, in ${column.label}.`, undo: ids.join(',') }
+        : { ok: false, say: 'The tasks weren’t added. Try again.' }
+    }
+    if (command === 'undo') {
+      const session = sessionRef.current
+      const ids = text.split(',').filter(id => session.readStore().tasks.some(task => task.id === id))
+      await Promise.all(ids.map(id => session.deleteTask(id)))
+      return { ok: true, say: ids.length ? `Took ${ids.length === 1 ? 'that task' : `those ${ids.length} tasks`} back off the board.` : 'Those tasks have already gone.' }
+    }
     if (command !== 'add') return { ok: false, say: 'Tasks can’t do that.' }
     const title = text.trim()
     if (!title) return { ok: false, say: 'Say what to add, like: Write the plan by Friday.' }
@@ -480,10 +506,11 @@ function ReadyTasksApp({
     try {
       const id = await current.createTask(title, column.id)
       if (!id || !sessionRef.current.readStore().tasks.some(task => task.id === id)) return { ok: false, say: 'The task wasn’t added. Try again.' }
+      lastAdded.current = id
     } catch (failure) {
       return { ok: false, say: failure instanceof Error ? failure.message : String(failure) }
     }
-    return { ok: true, say: `Added “${title}” to ${boundStoreRef.current.projects[0]?.name ?? boardName}, in ${column.label}.` }
+    return { ok: true, say: `Added “${title}” to ${boundStoreRef.current.projects[0]?.name ?? boardName}, in ${column.label}.`, ...(lastAdded.current ? { undo: lastAdded.current } : {}) }
   })
 
   // Warm `resource.open` — a `.tasks` package opened from PureFiles.
