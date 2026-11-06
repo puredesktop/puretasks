@@ -126,7 +126,7 @@ const Suggestions = styled.span`
   box-sizing: border-box;
   padding: 4px;
   border: 1px solid var(--tasks-edge);
-  border-radius: 10px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-popover);
   box-shadow: 0 14px 34px rgba(23, 26, 31, 0.2);
 
@@ -136,7 +136,7 @@ const Suggestions = styled.span`
     gap: 1px;
     padding: 7px 9px;
     border: 0;
-    border-radius: 7px;
+    border-radius: var(--pure-chrome-radius, 3px);
     background: transparent;
     color: var(--tasks-ink);
     font: inherit;

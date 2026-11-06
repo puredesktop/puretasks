@@ -14,7 +14,7 @@ const Rows = styled.div`
   min-height: 0;
   overflow: auto;
   padding: 10px;
-  border-radius: 14px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-panel);
   border: 1px solid var(--tasks-edge);
   backdrop-filter: var(--tasks-blur);

@@ -464,7 +464,7 @@ export const ColumnCount = styled.span<{
         $status,
         $done,
       )} 22%, transparent)`};
-  border-radius: 999px;
+  border-radius: 2px;
   background: ${({ $status, $done }) => columnStatusTint($status, $done)};
   color: ${({ $status, $done }) => columnStatusColor($status, $done)};
   font-family: var(--platform-typography-font-family-mono);
@@ -1247,7 +1247,7 @@ export const FooterSavedState = styled.span`
   min-width: 0;
   padding: 4px 10px;
   border: 1px solid var(--platform-colors-semantic-green-border);
-  border-radius: var(--platform-radius-pill, 999px);
+  border-radius: 2px;
   background: var(--platform-colors-semantic-green-muted);
   color: var(--platform-colors-semantic-green-text);
   font-size: var(--platform-typography-font-size-sm);
@@ -1449,7 +1449,7 @@ export const CardPriorityPill = styled.span<{ $priority: 'low' | 'high' }>`
       $priority === 'high'
         ? 'color-mix(in srgb, var(--platform-colors-semantic-red-text) 28%, transparent)'
         : 'var(--platform-colors-border-strong)'};
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--pure-chrome-paper);
   color: ${({ $priority }) =>
     $priority === 'high'
@@ -1462,7 +1462,7 @@ export const CardPriorityPill = styled.span<{ $priority: 'low' | 'high' }>`
   span {
     width: 5px;
     height: 5px;
-    border-radius: 999px;
+    border-radius: 2px;
     background: ${({ $priority }) =>
       $priority === 'high'
         ? 'var(--platform-colors-semantic-red-text)'
@@ -1508,7 +1508,7 @@ export const Avatar = styled.span`
   width: 18px;
   height: 18px;
   border: 1px solid var(--platform-colors-border-strong);
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--pure-chrome-well);
   color: var(--platform-colors-text-secondary);
   font-family: var(--platform-typography-font-family-mono);
