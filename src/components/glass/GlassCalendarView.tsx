@@ -22,7 +22,7 @@ const Day = styled.div<{ $muted?: boolean; $today?: boolean }>`
   min-width: 0;
   min-height: 0;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: ${({ $today }) => ($today ? 'color-mix(in srgb, var(--tasks-acc) 10%, var(--tasks-panel))' : 'var(--tasks-panel)')};
   border: 1px solid ${({ $today }) => ($today ? 'var(--tasks-acc)' : 'var(--tasks-edge)')};
   backdrop-filter: var(--tasks-blur);
@@ -37,7 +37,7 @@ const Chip = styled.button<{ $done?: boolean; $over?: boolean }>`
   box-sizing: border-box;
   padding: 3px 7px;
   border: 1px solid var(--tasks-edge);
-  border-radius: 7px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-card);
   font: 500 11.5px var(--platform-typography-font-family);
   color: ${({ $done, $over }) => ($done ? 'var(--tasks-muted)' : $over ? 'var(--tasks-bad-ink)' : 'var(--tasks-ink)')};

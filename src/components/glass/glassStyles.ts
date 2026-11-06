@@ -1,4 +1,5 @@
-import { styled } from 'styled-components'
+import { css, styled } from 'styled-components'
+import { primaryLook, quiet, quietLabel, statusLabel } from '../../ui/styles'
 
 /**
  * The glass look: frosted panels on the desk, near-solid cards so text stays
@@ -73,54 +74,38 @@ export const TopBar = styled.div`
   @media (max-width: 1000px) { flex-wrap: wrap; height: auto; min-height: 48px; padding: 8px 14px; }
 `
 
+/** Every button in the bar: raised and pressed. The main one ($accent) is Tasks' colour, solid; one that is on is pressed grey. */
 export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  /* The view tabs' shape, not a pill: one family of controls in the bar. */
-  border-radius: 8px;
-  border: 1px solid ${({ $on, $accent }) => ($on || $accent ? 'transparent' : 'var(--tasks-line)')};
-  background: ${({ $on, $accent, $quiet }) =>
-    $accent ? 'var(--tasks-acc)' : $on ? 'var(--tasks-ink)' : $quiet ? 'transparent' : 'var(--tasks-panel-strong)'};
-  color: ${({ $on, $accent }) => ($on || $accent ? 'var(--pure-chrome-on-accent)' : 'var(--tasks-ink)')};
-  font: 500 12.5px var(--platform-typography-font-family);
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease;
-  &:hover:not(:disabled) { border-color: var(--tasks-edge-strong); }
-  &:disabled { opacity: 0.55; cursor: default; }
-  &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
-  kbd { font-family: var(--tasks-mono); font-size: 10.5px; opacity: 0.75; }
+  ${quiet}
+  ${({ $accent }) => ($accent ? primaryLook : '')}
+  ${({ $on }) => ($on ? css`
+    background: var(--n-selected);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.12);
+  ` : '')}
+  kbd { font-family: var(--platform-typography-font-family); font-size: 10.5px; opacity: 0.75; }
 `
 
-/* A visible track: the pale well alone read as nothing on the pale bar. */
+/** The views are tabs: words on the bar, the open one in ink with a rule under it in Tasks' colour. */
 export const ViewTabs = styled.div`
   display: flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--tasks-ink) 6%, transparent);
-  box-shadow: inset 0 0 0 1px var(--tasks-line);
+  align-self: stretch;
+  gap: 14px;
   max-width: 100%;
   flex-shrink: 0;
   overflow-x: auto;
 `
 
 export const ViewTab = styled.button<{ $on?: boolean }>`
-  height: 28px;
-  padding: 0 11px;
+  padding: 0 2px;
   border: 0;
-  border-radius: 8px;
-  background: ${({ $on }) => ($on ? 'var(--tasks-panel-strong)' : 'transparent')};
-  color: ${({ $on }) => ($on ? 'var(--tasks-ink)' : 'color-mix(in srgb, var(--tasks-ink) 72%, transparent)')};
+  border-radius: 0;
+  background: transparent;
+  box-shadow: ${({ $on }) => ($on ? 'inset 0 -2px 0 var(--p-text)' : 'none')};
+  color: ${({ $on }) => ($on ? 'var(--n-ink)' : 'var(--n-soft)')};
   font: ${({ $on }) => ($on ? '600' : '500')} 13px var(--platform-typography-font-family);
-  box-shadow: ${({ $on }) =>
-    $on ? '0 0 0 1px var(--tasks-line), 0 1px 3px rgba(16, 22, 40, 0.12)' : 'none'};
   cursor: pointer;
-  &:hover { color: var(--tasks-ink); }
-  &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
+  &:hover { color: var(--n-ink); }
+  &:focus-visible { outline: 2px solid var(--p-text); outline-offset: -2px; }
 `
 
 export const SearchBox = styled.label`
@@ -130,7 +115,7 @@ export const SearchBox = styled.label`
   width: 260px;
   height: 30px;
   padding: 0 10px;
-  border-radius: 9px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid var(--tasks-line);
   background: var(--tasks-panel-strong);
   color: var(--tasks-muted);
@@ -181,17 +166,17 @@ export const RailRow = styled.button<{ $on?: boolean }>`
   height: 32px;
   padding: 0 10px;
   border: 0;
-  border-radius: 9px;
-  background: ${({ $on }) => ($on ? 'var(--tasks-panel-strong)' : 'transparent')};
+  border-radius: 0;
+  background: ${({ $on }) => ($on ? 'var(--p-chosen)' : 'transparent')};
   color: var(--tasks-ink);
   font: ${({ $on }) => ($on ? '600' : '500')} 13px var(--platform-typography-font-family);
   text-align: left;
   cursor: pointer;
-  box-shadow: ${({ $on }) => ($on ? '0 1px 2px rgba(16, 22, 40, 0.06)' : 'none')};
-  &:hover { background: var(--tasks-panel); }
+  box-shadow: ${({ $on }) => ($on ? 'var(--p-chosen-edge)' : 'none')};
+  &:hover { background: ${({ $on }) => ($on ? 'var(--p-chosen)' : 'var(--n-hover)')}; }
   &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
   span.name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  small { font-family: var(--tasks-mono); font-size: 10.5px; color: var(--tasks-faint); }
+  small { font-size: 11px; color: var(--tasks-faint); }
   @media (max-width: 600px) { flex-shrink: 0; max-width: 180px; }
 `
 
@@ -205,10 +190,8 @@ export const RailDot = styled.span<{ $color?: string }>`
 
 export const RailGroup = styled.div`
   padding: 14px 10px 6px;
-  font-family: var(--tasks-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--tasks-faint);
   @media (max-width: 600px) { display: none; }
 `
@@ -233,10 +216,8 @@ export const FilterRow = styled.div`
 `
 
 export const Kicker = styled.span`
-  font-family: var(--tasks-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--tasks-muted);
   margin-right: 2px;
 `
@@ -288,11 +269,9 @@ export const GlassColumn = styled.section<{ $over?: boolean; $refused?: boolean;
   width: 250px;
   box-sizing: border-box;
   padding: 10px;
-  border-radius: 16px;
-  border: 1px solid ${({ $over, $refused }) => ($refused ? 'var(--tasks-bad-ink)' : $over ? 'var(--tasks-acc)' : 'var(--tasks-edge)')};
-  background: var(--tasks-panel);
-  backdrop-filter: var(--tasks-blur);
-  -webkit-backdrop-filter: var(--tasks-blur);
+  border-radius: 3px;
+  border: 1px solid ${({ $over, $refused }) => ($refused ? 'var(--p-failed-text)' : $over ? 'var(--p-text)' : 'var(--n-fence)')};
+  background: var(--n-panel);
   opacity: ${({ $done }) => ($done ? 0.92 : 1)};
   transition: border-color 120ms ease;
 `
@@ -306,7 +285,7 @@ export const ColumnHead = styled.div`
   font-weight: 600;
   min-width: 0;
   .label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  small { font-family: var(--tasks-mono); font-size: 11px; color: var(--tasks-muted); font-weight: 400; }
+  small { font-family: var(--platform-typography-font-family); font-size: 11px; color: var(--tasks-muted); font-weight: 400; }
 `
 
 export const ColumnTitleField = styled.input`
@@ -323,10 +302,10 @@ export const ColumnTitleField = styled.input`
 `
 
 export const Wip = styled.span<{ $full?: boolean }>`
-  font-family: var(--tasks-mono);
+  font-family: var(--platform-typography-font-family);
   font-size: 10.5px;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: ${({ $full }) => ($full ? 'var(--tasks-warn-bg)' : 'var(--tasks-well)')};
   color: ${({ $full }) => ($full ? 'var(--tasks-warn-ink)' : 'var(--tasks-muted)')};
   white-space: nowrap;
@@ -340,7 +319,7 @@ export const IconBtn = styled.button`
   height: 24px;
   padding: 0;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: transparent;
   color: var(--tasks-muted);
   cursor: pointer;
@@ -360,7 +339,7 @@ export const DropSlot = styled.div<{ $active?: boolean }>`
   position: relative;
   min-height: 28px;
   flex: 1 1 auto;
-  border-radius: 10px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: ${({ $active }) => ($active ? 'color-mix(in srgb, var(--tasks-acc) 8%, transparent)' : 'transparent')};
   &::before {
     content: '';
@@ -383,16 +362,17 @@ export const Card = styled.article<{ $selected?: boolean; $picked?: boolean; $dr
   flex-direction: column;
   gap: 7px;
   padding: 10px 12px 9px;
-  border-radius: 12px;
-  background: var(--tasks-card);
-  border: 1px solid var(--tasks-edge);
-  box-shadow: 0 1px 2px rgba(16, 22, 40, 0.06), 0 10px 22px -16px rgba(16, 22, 40, 0.35);
+  /* A square sheet on a hairline, no shadow. Selected has the shared look; picked to move, a firm outline in Tasks' colour. */
+  border-radius: 3px;
+  background: ${({ $selected }) => ($selected ? 'var(--p-chosen)' : 'var(--n-sheet)')};
+  border: 1px solid var(--n-line);
+  box-shadow: ${({ $selected }) => ($selected ? 'var(--p-chosen-edge)' : 'none')};
   cursor: grab;
   opacity: ${({ $dragging, $done }) => ($dragging ? 0.5 : $done ? 0.78 : 1)};
-  outline: ${({ $selected, $picked }) => ($picked ? '2px solid var(--tasks-acc)' : $selected ? '2px solid color-mix(in srgb, var(--tasks-acc) 45%, transparent)' : '0')};
+  outline: ${({ $picked }) => ($picked ? '2px solid var(--p-text)' : '0')};
   outline-offset: -1px;
-  transition: box-shadow 120ms ease, opacity 120ms ease;
-  &:hover { box-shadow: 0 2px 4px rgba(16, 22, 40, 0.08), 0 14px 26px -14px rgba(16, 22, 40, 0.4); }
+  transition: border-color 120ms ease, opacity 120ms ease;
+  &:hover { border-color: var(--n-strong); }
   &:active { cursor: grabbing; }
   &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: -1px; }
   h4 {
@@ -415,33 +395,21 @@ export const CardMeta = styled.div`
   color: var(--tasks-muted);
 `
 
+/**
+ * A tag says something, so it is a label, never a button: a flat tag in the system colour of what it says. Priority and due
+ * soon are amber (needs you), overdue and blocked red, a link blue, AI violet, done green; a plain label quiet grey.
+ */
 export const Tag = styled.span<{ $tone?: 'pri' | 'due' | 'soon' | 'over' | 'blocked' | 'link' | 'ai' | 'ok' | 'wait' }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
+  ${({ $tone }) =>
+    $tone === 'pri' || $tone === 'soon' ? statusLabel('needs-you')
+    : $tone === 'over' || $tone === 'blocked' ? statusLabel('failed')
+    : $tone === 'link' ? statusLabel('working')
+    : $tone === 'ai' ? statusLabel('made-by-ai')
+    : $tone === 'ok' ? statusLabel('done')
+    : quietLabel}
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  background: ${({ $tone }) =>
-    $tone === 'pri' || $tone === 'soon' ? 'var(--tasks-warn-bg)'
-    : $tone === 'over' || $tone === 'blocked' ? 'var(--tasks-bad-bg)'
-    : $tone === 'link' ? 'var(--tasks-info-bg)'
-    : $tone === 'ai' ? 'var(--tasks-ai-bg)'
-    : $tone === 'ok' ? 'var(--tasks-ok-bg)'
-    : 'var(--tasks-well)'};
-  color: ${({ $tone }) =>
-    $tone === 'pri' || $tone === 'soon' ? 'var(--tasks-warn-ink)'
-    : $tone === 'over' || $tone === 'blocked' ? 'var(--tasks-bad-ink)'
-    : $tone === 'link' ? 'var(--tasks-info-ink)'
-    : $tone === 'ai' ? 'var(--tasks-ai-ink)'
-    : $tone === 'ok' ? 'var(--tasks-ok-ink)'
-    : 'var(--tasks-muted)'};
 `
 
 export const Avatar = styled.span<{ $hue?: number; $size?: number }>`
@@ -481,7 +449,7 @@ export const AddRow = styled.button`
   gap: 6px;
   height: 30px;
   padding: 0 8px;
-  border-radius: 9px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px dashed var(--tasks-edge-strong);
   background: transparent;
   font: 500 12.5px var(--platform-typography-font-family);
@@ -499,7 +467,7 @@ export const QuickAdd = styled.form`
     min-width: 0;
     height: 30px;
     padding: 0 10px;
-    border-radius: 9px;
+    border-radius: var(--pure-chrome-radius, 3px);
     border: 1px solid var(--tasks-acc);
     background: var(--tasks-card);
     font: 13px var(--platform-typography-font-family);
@@ -516,7 +484,7 @@ export const Popover = styled.div`
   gap: 1px;
   box-sizing: border-box;
   padding: 6px;
-  border-radius: 12px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-popover);
   border: 1px solid var(--tasks-edge);
   backdrop-filter: var(--tasks-blur);
@@ -532,7 +500,7 @@ export const MenuItem = styled.button<{ $on?: boolean; $tone?: 'accent' | 'dange
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: ${({ $on }) => ($on ? 'color-mix(in srgb, var(--tasks-acc) 14%, transparent)' : 'transparent')};
   color: ${({ $tone }) => ($tone === 'danger' ? 'var(--tasks-bad-ink)' : $tone === 'accent' ? 'var(--tasks-acc-ink)' : 'var(--tasks-ink)')};
   font: ${({ $on }) => ($on ? '600' : '500')} 13px var(--platform-typography-font-family);
@@ -541,16 +509,14 @@ export const MenuItem = styled.button<{ $on?: boolean; $tone?: 'accent' | 'dange
   white-space: nowrap;
   &:hover:not(:disabled) { background: var(--tasks-well); }
   &:disabled { opacity: 0.5; cursor: default; }
-  kbd { margin-left: auto; padding-left: 14px; font-family: var(--tasks-mono); font-size: 10.5px; color: var(--tasks-faint); }
-  small { margin-left: auto; padding-left: 14px; font-family: var(--tasks-mono); font-size: 10.5px; color: var(--tasks-warn-ink); }
+  kbd { margin-left: auto; padding-left: 14px; font-family: var(--platform-typography-font-family); font-size: 10.5px; color: var(--tasks-faint); }
+  small { margin-left: auto; padding-left: 14px; font-family: var(--platform-typography-font-family); font-size: 10.5px; color: var(--tasks-warn-ink); }
 `
 
 export const MenuHead = styled.span`
   padding: 6px 10px 4px;
-  font-family: var(--tasks-mono);
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 11.5px;
+  font-weight: 600;
   color: var(--tasks-faint);
 `
 
@@ -567,7 +533,7 @@ export const Toast = styled.div`
   z-index: 150;
   transform: translateX(-50%);
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-ink);
   color: var(--platform-colors-text-inverse);
   font-size: 12.5px;
@@ -580,7 +546,7 @@ export const SelectionBar = styled.div`
   gap: 6px;
   height: 38px;
   padding: 0 8px 0 14px;
-  border-radius: 12px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-popover);
   border: 1px solid var(--tasks-edge);
   box-shadow: 0 10px 30px rgba(23, 26, 31, 0.16);
@@ -597,7 +563,7 @@ export const Pick = styled.label`
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: 7px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-card);
   border: 1px solid var(--tasks-line);
   cursor: pointer;
@@ -623,7 +589,7 @@ export const OverlayPanel = styled.div`
   width: min(980px, 100%);
   max-height: calc(100% - 24px);
   box-sizing: border-box;
-  border-radius: 18px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid var(--tasks-edge);
   background: var(--tasks-panel-strong);
   backdrop-filter: var(--tasks-blur);
@@ -638,7 +604,7 @@ export const OverlayTop = styled.div`
   align-items: center;
   gap: 10px;
   padding: 12px 18px 0;
-  font-family: var(--tasks-mono);
+  font-family: var(--platform-typography-font-family);
   font-size: 11px;
   color: var(--tasks-muted);
   .hint { margin-left: auto; font-size: 10.5px; color: var(--tasks-faint); }
@@ -737,8 +703,8 @@ export const Stepper = styled.div`
     color: var(--tasks-muted);
     font: 500 12px var(--platform-typography-font-family);
     cursor: pointer;
-    &:first-child { border-radius: 999px 0 0 999px; }
-    &:last-child { border-radius: 0 999px 999px 0; }
+    &:first-child { border-radius: 3px 0 0 3px; }
+    &:last-child { border-radius: 0 3px 3px 0; }
     &[data-past='true'] { background: color-mix(in srgb, var(--tasks-acc) 20%, transparent); color: var(--tasks-acc-ink); }
     &[data-on='true'] { background: var(--tasks-acc); color: var(--pure-chrome-on-accent); font-weight: 600; }
     &:disabled { cursor: default; }
@@ -778,7 +744,7 @@ export const FieldInput = styled.input`
   box-sizing: border-box;
   height: 28px;
   padding: 0 8px;
-  border-radius: 7px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid transparent;
   background: transparent;
   font: 13px var(--platform-typography-font-family);
@@ -791,7 +757,7 @@ export const FieldInput = styled.input`
 export const FieldSelect = styled.select`
   height: 28px;
   padding: 0 6px;
-  border-radius: 7px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid transparent;
   background: transparent;
   font: 13px var(--platform-typography-font-family);
@@ -806,12 +772,12 @@ export const SubtaskRow = styled.div`
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  border-radius: 10px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-card);
   border: 1px solid var(--tasks-line);
   font-size: 13px;
   cursor: pointer;
-  .status { margin-left: auto; font-family: var(--tasks-mono); font-size: 10.5px; color: var(--tasks-muted); }
+  .status { margin-left: auto; font-family: var(--platform-typography-font-family); font-size: 10.5px; color: var(--tasks-muted); }
   &:hover { border-color: var(--tasks-edge-strong); }
 `
 
@@ -820,7 +786,7 @@ export const Prose = styled.textarea`
   box-sizing: border-box;
   min-height: 72px;
   padding: 8px 10px;
-  border-radius: 9px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid transparent;
   background: transparent;
   font: 14px/1.55 var(--platform-typography-font-family);
@@ -847,7 +813,7 @@ export const ListRowGlass = styled.div<{ $muted?: boolean }>`
   gap: 12px;
   align-items: center;
   padding: 9px 12px;
-  border-radius: 12px;
+  border-radius: var(--pure-chrome-radius, 3px);
   background: var(--tasks-card);
   border: 1px solid var(--tasks-edge);
   box-shadow: 0 1px 2px rgba(16, 22, 40, 0.05);
@@ -863,7 +829,7 @@ export const SectionRow = styled.div`
   gap: 10px;
   margin: 8px 0 2px;
   h3 { margin: 0; font-size: 13px; font-weight: 700; }
-  span { font-family: var(--tasks-mono); font-size: 11px; color: var(--tasks-muted); }
+  span { font-family: var(--platform-typography-font-family); font-size: 11px; color: var(--tasks-muted); }
 `
 
 export const BoardCard = styled.button`
@@ -871,7 +837,7 @@ export const BoardCard = styled.button`
   flex-direction: column;
   gap: 10px;
   padding: 16px 18px 14px;
-  border-radius: 16px;
+  border-radius: var(--pure-chrome-radius, 3px);
   border: 1px solid var(--tasks-edge);
   background: var(--tasks-panel);
   backdrop-filter: var(--tasks-blur);
@@ -890,10 +856,10 @@ export const BoardCard = styled.button`
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  th { text-align: left; font-family: var(--tasks-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tasks-faint); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--tasks-line); white-space: nowrap; }
+  th { text-align: left; font-family: var(--platform-typography-font-family); font-size: 12px; color: var(--tasks-muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--tasks-line); white-space: nowrap; }
   td { padding: 8px 10px; border-bottom: 1px solid var(--tasks-line); font-size: 13px; vertical-align: middle; }
   tr.group td { padding: 14px 10px 6px; border-bottom: 0; font-weight: 700; }
-  tr.group td span { font-family: var(--tasks-mono); font-size: 11px; color: var(--tasks-muted); font-weight: 400; margin-left: 8px; }
+  tr.group td span { font-family: var(--platform-typography-font-family); font-size: 11px; color: var(--tasks-muted); font-weight: 400; margin-left: 8px; }
   tr.row { cursor: pointer; }
   tr.row:hover td { background: var(--tasks-well); }
   td.t { font-weight: 600; }
