@@ -20,7 +20,7 @@ const Bar = styled.header`
 const Places = styled.nav`margin-left: auto; display: flex; gap: 2px;`
 const Place = styled.button<{ $on: boolean }>`
   all: unset; cursor: pointer; padding: 3px 8px; font-size: 12.5px; font-weight: ${p => (p.$on ? 650 : 500)}; color: ${p => (p.$on ? 'var(--tasks-ink)' : 'var(--tasks-muted)')};
-  box-shadow: inset 0 -2px 0 ${p => (p.$on ? 'var(--tasks-acc)' : 'transparent')}; font-variant-numeric: tabular-nums lining-nums;
+  background: ${p => (p.$on ? 'var(--p-chosen)' : 'transparent')}; box-shadow: ${p => (p.$on ? 'var(--p-chosen-edge)' : 'none')}; font-variant-numeric: tabular-nums lining-nums;
   &:hover { color: var(--tasks-ink); } &:focus-visible { outline: 2px solid var(--tasks-acc); outline-offset: 1px; }
 `
 const Capture = styled.form`
