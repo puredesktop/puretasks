@@ -1,3 +1,12 @@
+/* Follows the desk's theme: each colour is light-dark(its light value, its dark partner), the dark ones the held greys
+   of docs/held-apps.md. A light theme leaves the colour scheme as it was; a dark one says dark, and parts that asked
+   for light take --held-scheme instead. */
+[data-compact-room]:is([data-platform-theme='dark'] *),
+html:has([data-compact-room])[data-platform-theme='dark'] {
+  color-scheme: dark;
+  --held-scheme: dark;
+}
+
 /* PureTasks held in a page (useCompactInRoom). The frame carries data-compact-room only then, and every rule here starts
    from it, so with compact off nothing in this file applies. The top bar, the rail and the filters are hidden, not
    removed: everything stays mounted, so state stays and the agent's tools keep working. Full app gives it all back. */
@@ -10,44 +19,44 @@
 
 /* One white sheet in the page's light, whatever the desk's theme: no frost, no panels, hairlines, square corners. */
 [data-compact-room] [data-compact='shell'] {
-  color-scheme: light;
-  --tasks-acc: oklch(0.47 0.11 250);
-  --tasks-acc-ink: oklch(0.4 0.11 250);
-  --tasks-panel: #ffffff;
-  --tasks-panel-strong: #ffffff;
-  --tasks-card: #ffffff;
-  --tasks-edge: #dde1e7;
-  --tasks-edge-strong: #c9ced6;
-  --tasks-line: #eef0f3;
-  --tasks-well: #f4f6f9;
-  --tasks-popover: #ffffff;
+  color-scheme: var(--held-scheme, light);
+  --tasks-acc: light-dark(oklch(0.47 0.11 250), #74b0ee);
+  --tasks-acc-ink: light-dark(oklch(0.4 0.11 250), #73b0ee);
+  --tasks-panel: light-dark(#ffffff, #1c1c1c);
+  --tasks-panel-strong: light-dark(#ffffff, #1c1c1c);
+  --tasks-card: light-dark(#ffffff, #1c1c1c);
+  --tasks-edge: light-dark(#dde1e7, #3a3a3a);
+  --tasks-edge-strong: light-dark(#c9ced6, #4a4a4a);
+  --tasks-line: light-dark(#eef0f3, #2c2c2c);
+  --tasks-well: light-dark(#f4f6f9, #272727);
+  --tasks-popover: light-dark(#ffffff, #1c1c1c);
   --tasks-blur: none;
-  --tasks-ink: #161d27;
-  --tasks-muted: #4f5866;
-  --tasks-faint: #79818e;
-  --tasks-ok-bg: #e1f1e8;
-  --tasks-ok-ink: #1d6b4b;
-  --tasks-warn-bg: #f8efdc;
-  --tasks-warn-ink: #8a5a12;
-  --tasks-bad-bg: #f9e3dd;
-  --tasks-bad-ink: #b23b27;
-  --tasks-info-bg: #e3edf6;
-  --tasks-info-ink: #24557a;
-  --canvas: #ffffff;
-  --platform-colors-bg: #ffffff;
-  --platform-colors-surface: #ffffff;
-  --platform-colors-surface-hover: #f5f6f8;
-  --pure-chrome-bar: #ffffff;
-  --pure-chrome-accent: #2f5d8c;
-  --tasks-acc: #2f5d8c;
-  --tasks-acc-ink: #24496f;
-  background: #ffffff !important; /* the white appearance sets the page's ground with !important */
+  --tasks-ink: light-dark(#161d27, #ededed);
+  --tasks-muted: light-dark(#4f5866, #a1acbb);
+  --tasks-faint: light-dark(#79818e, #969696);
+  --tasks-ok-bg: light-dark(#e1f1e8, #22352b);
+  --tasks-ok-ink: light-dark(#1d6b4b, #73bd99);
+  --tasks-warn-bg: light-dark(#f8efdc, #382f1b);
+  --tasks-warn-ink: light-dark(#8a5a12, #d4a05f);
+  --tasks-bad-bg: light-dark(#f9e3dd, #3f2a25);
+  --tasks-bad-ink: light-dark(#b23b27, #fe8069);
+  --tasks-info-bg: light-dark(#e3edf6, #23323f);
+  --tasks-info-ink: light-dark(#24557a, #7eb1db);
+  --canvas: light-dark(#ffffff, #1c1c1c);
+  --platform-colors-bg: light-dark(#ffffff, #1c1c1c);
+  --platform-colors-surface: light-dark(#ffffff, #1c1c1c);
+  --platform-colors-surface-hover: light-dark(#f5f6f8, #272727);
+  --pure-chrome-bar: light-dark(#ffffff, #1c1c1c);
+  --pure-chrome-accent: light-dark(#2f5d8c, #7fafe3);
+  --tasks-acc: light-dark(#2f5d8c, #7fafe3);
+  --tasks-acc-ink: light-dark(#24496f, #86afdb);
+  background: light-dark(#ffffff, #1c1c1c) !important; /* the white appearance sets the page's ground with !important */
   color: var(--tasks-ink);
 }
 html:has([data-compact-room]),
 html:has([data-compact-room]):root[data-platform-appearance] body,
 html:has([data-compact-room]) body {
-  background: #ffffff !important;
+  background: light-dark(#ffffff, #1c1c1c) !important;
 }
 
 /* The board is the page: only it scrolls, sideways through the columns, each column down its own cards. */
