@@ -85,22 +85,23 @@ export const Pill = styled.button<{ $on?: boolean; $accent?: boolean; $quiet?: b
   kbd { font-family: var(--platform-typography-font-family); font-size: 10.5px; opacity: 0.75; }
 `
 
-/** The views are tabs: words on the bar, the open one in ink with a rule under it in Tasks' colour. */
+/** The views are tabs; the open one has the shared selected look (hairline round a faint ground). Never an under-bar. */
 export const ViewTabs = styled.div`
   display: flex;
-  align-self: stretch;
-  gap: 14px;
+  align-items: center;
+  gap: 4px;
   max-width: 100%;
   flex-shrink: 0;
   overflow-x: auto;
 `
 
 export const ViewTab = styled.button<{ $on?: boolean }>`
-  padding: 0 2px;
+  height: 28px;
+  padding: 0 10px;
   border: 0;
   border-radius: 0;
-  background: transparent;
-  box-shadow: ${({ $on }) => ($on ? 'inset 0 -2px 0 var(--p-text)' : 'none')};
+  background: ${({ $on }) => ($on ? 'var(--p-chosen)' : 'transparent')};
+  box-shadow: ${({ $on }) => ($on ? 'var(--p-chosen-edge)' : 'none')};
   color: ${({ $on }) => ($on ? 'var(--n-ink)' : 'var(--n-soft)')};
   font: ${({ $on }) => ($on ? '600' : '500')} 13px var(--platform-typography-font-family);
   cursor: pointer;
