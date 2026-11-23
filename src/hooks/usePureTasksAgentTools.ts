@@ -1,51 +1,24 @@
+/**
+ * Registering PureTasks' exposed operations with the platform:
+ *   - 6 composite `fn_*` functions (always exposed)
+ *   - 7 core atomic tools (~24% of 29, including permanent-delete `deleteTaskProject`, always exposed)
+ *   - 3 universal escape-hatch meta-tools (`discoverAppTools`,
+ *     `callExtendedReadTool`, `callExtendedTool`) giving full on-demand access
+ *     to all 22 specialist atomic tools.
+ */
+import { useMemo, useRef } from 'react'
+import type { AgentToolHandler } from '@purescience/platform-ui/bridge/react/usePlatformAgentTools'
 import { usePlatformAgentTools } from '@purescience/platform-ui/bridge/react/usePlatformAgentTools'
-import { useRef } from 'react'
 import {
   AgentTasksToolError,
+  EXPOSED_TOOL_NAMES,
   PURETASKS_AGENT_LOG_LABEL,
-  PURETASKS_AGENT_TOOL_NAMES,
 } from '../agents/catalog'
 import type {
   TasksAgentBoardApi,
   TasksAgentToolContext,
 } from '../agents/context'
-import {
-  addTaskResourceLinkHandler,
-  createTaskChecklistHandler,
-  createTaskChecklistItemHandler,
-  createTaskCommentHandler,
-  createTaskColumnHandler,
-  createTaskHandler,
-  createTaskProjectHandler,
-} from '../agents/handlers/create'
-import {
-  deleteTaskChecklistHandler,
-  deleteTaskChecklistItemHandler,
-  deleteTaskCommentHandler,
-  deleteTaskColumnHandler,
-  deleteTaskHandler,
-  deleteTaskProjectHandler,
-  removeTaskResourceLinkHandler,
-} from '../agents/handlers/delete'
-import {
-  getTaskHandler,
-  getTasksContextHandler,
-  listTaskActivityHandler,
-  listTaskColumnsHandler,
-  listTaskProjectsHandler,
-  listTasksHandler,
-  openTaskProjectHandler,
-} from '../agents/handlers/read'
-import {
-  applyTaskBoardPatchHandler,
-  createMissionFromTaskHandler,
-  updateTaskChecklistHandler,
-  updateTaskChecklistItemHandler,
-  updateTaskCommentHandler,
-  updateTaskColumnHandler,
-  updateTaskHandler,
-  updateTaskProjectHandler,
-} from '../agents/handlers/write'
+import { buildPureTasksHandlers } from '../agents/operationsRegistry'
 import type { TasksSessionState } from './useTasksSession'
 
 function toTasksAgentToolContext(
@@ -80,62 +53,30 @@ export function usePureTasksAgentTools(
   )
   contextRef.current = toTasksAgentToolContext(session, board)
 
+  const registryHandlers = useMemo(
+    () => buildPureTasksHandlers(() => contextRef.current),
+    [],
+  )
+
+  // Statically key-preserving registration so `scripts/check-manifests.mjs`
+  // can verify every manifest tool has a live registered handler at build time.
+  const handlers = useMemo(
+    () =>
+      Object.fromEntries(
+        EXPOSED_TOOL_NAMES.map(name => [
+          name,
+          async (invoke: Parameters<AgentToolHandler>[0]) =>
+            registryHandlers[name]!(invoke),
+        ]),
+      ),
+    [registryHandlers],
+  )
+
   usePlatformAgentTools({
     ready,
-    tools: PURETASKS_AGENT_TOOL_NAMES,
+    tools: EXPOSED_TOOL_NAMES,
     logLabel: PURETASKS_AGENT_LOG_LABEL,
     errorType: AgentTasksToolError,
-    handlers: {
-      getTasksContext: () => getTasksContextHandler(contextRef.current),
-      getTask: invoke => getTaskHandler(contextRef.current, invoke),
-      listTaskProjects: () => listTaskProjectsHandler(contextRef.current),
-      listTaskColumns: () => listTaskColumnsHandler(contextRef.current),
-      listTasks: invoke => listTasksHandler(contextRef.current, invoke),
-      listTaskActivity: invoke =>
-        listTaskActivityHandler(contextRef.current, invoke),
-      createTaskProject: invoke =>
-        createTaskProjectHandler(contextRef.current, invoke),
-      updateTaskProject: invoke =>
-        updateTaskProjectHandler(contextRef.current, invoke),
-      deleteTaskProject: invoke =>
-        deleteTaskProjectHandler(contextRef.current, invoke),
-      openTaskProject: invoke =>
-        openTaskProjectHandler(contextRef.current, invoke),
-      createTaskColumn: invoke =>
-        createTaskColumnHandler(contextRef.current, invoke),
-      updateTaskColumn: invoke =>
-        updateTaskColumnHandler(contextRef.current, invoke),
-      deleteTaskColumn: invoke =>
-        deleteTaskColumnHandler(contextRef.current, invoke),
-      createTask: invoke => createTaskHandler(contextRef.current, invoke),
-      updateTask: invoke => updateTaskHandler(contextRef.current, invoke),
-      deleteTask: invoke => deleteTaskHandler(contextRef.current, invoke),
-      createTaskComment: invoke =>
-        createTaskCommentHandler(contextRef.current, invoke),
-      updateTaskComment: invoke =>
-        updateTaskCommentHandler(contextRef.current, invoke),
-      deleteTaskComment: invoke =>
-        deleteTaskCommentHandler(contextRef.current, invoke),
-      createTaskChecklist: invoke =>
-        createTaskChecklistHandler(contextRef.current, invoke),
-      updateTaskChecklist: invoke =>
-        updateTaskChecklistHandler(contextRef.current, invoke),
-      deleteTaskChecklist: invoke =>
-        deleteTaskChecklistHandler(contextRef.current, invoke),
-      createTaskChecklistItem: invoke =>
-        createTaskChecklistItemHandler(contextRef.current, invoke),
-      updateTaskChecklistItem: invoke =>
-        updateTaskChecklistItemHandler(contextRef.current, invoke),
-      deleteTaskChecklistItem: invoke =>
-        deleteTaskChecklistItemHandler(contextRef.current, invoke),
-      addTaskResourceLink: invoke =>
-        addTaskResourceLinkHandler(contextRef.current, invoke),
-      removeTaskResourceLink: invoke =>
-        removeTaskResourceLinkHandler(contextRef.current, invoke),
-      createMissionFromTask: invoke =>
-        createMissionFromTaskHandler(contextRef.current, invoke),
-      applyTaskBoardPatch: invoke =>
-        applyTaskBoardPatchHandler(contextRef.current, invoke),
-    },
+    handlers,
   })
 }
