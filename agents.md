@@ -115,23 +115,44 @@ Custom columns delete freely (their tasks move to a column you name).
 
 ## Tools
 
+PureTasks uses the shared 3-tier Pure\* Operations Registry: prefer the 6 composite `fn_*` functions first (each replaces 3–15 atomic round-trips), fall back to the 7 core atomic tools for targeted single-card operations, and reach any of the 22 specialist atomic tools on demand via `discoverAppTools`, `callExtendedReadTool`, and `callExtendedTool`.
+
+### Composite functions (`fn_*`, always exposed — prefer these first)
+
+| Workflow | Function |
+| --- | --- |
+| Daily/status briefing: open board, columns & WIP, overdue/today/week, review queue, blockers, stale cards, missions, recent activity | `fn_boardBriefingAndSchedule({ asOfDate?, staleDays?, recentActivityLimit?, ownerName? })` |
+| Workload balance, WIP pressure, estimate vs logged hours, bottlenecks, and hygiene score | `fn_workloadAndHealthAudit({ asOfDate?, status?, label? })` |
+| Complete 360° task dossier: full card, checklists, parent, subtasks, open/resolved blockers, dependents, activity | `fn_getTaskDossier({ taskId?, activityLimit?, asOfDate? })` |
+| Capture a structured card with checklists, subtasks, links, and initial comment in one atomic write | `fn_captureStructuredTask({ title, ..., checklists?, subtasks?, initialComment? })` |
+| Batch triage, reschedule, reassign, relabel (`addLabels`/`removeLabels`), or move cards atomically (supports `dryRun`) | `fn_batchTriageTasks({ updates, dryRun?, reason? })` |
+| Weekly/period review digest: completed work (including archived), net throughput, repeating cadence, upcoming deadlines, carryover | `fn_periodReviewDigest({ days?, upcomingDays?, asOfDate?, ownerName? })` |
+
+### Core atomic tools (always exposed)
+
 | Task | Tool |
 | --- | --- |
 | Orient: open board, filters, selected task, counts | `getTasksContext` (always first) |
-| Which boards exist, which is open | `listTaskProjects` |
-| Switch to another board | `openTaskProject({ path })` |
-| Start a new board | `createTaskProject({ name, description? })` |
-| Rename / describe the open board | `updateTaskProject({ projectId, name?, description? })` |
-| Delete a board permanently | `deleteTaskProject({ path })` — never the open board |
-| Columns and their settings | `listTaskColumns`, `createTaskColumn`, `updateTaskColumn`, `deleteTaskColumn` |
 | Find cards (compact rows) | `listTasks({ status?, query?, label? })` |
 | One full card | `getTask({ taskId? })` (defaults to the selected card) |
-| Create / edit / move / reorder / delete a card | `createTask`, `updateTask`, `deleteTask` |
-| Progress and decisions on a card | `createTaskComment`, `updateTaskComment`, `deleteTaskComment` |
-| Break work into steps | `createTaskChecklist`, `updateTaskChecklist`, `deleteTaskChecklist`, `createTaskChecklistItem`, `updateTaskChecklistItem`, `deleteTaskChecklistItem` |
-| Tie a card to its origin | `addTaskResourceLink`, `removeTaskResourceLink` |
-| Bulk restructuring, undo of deletions | `applyTaskBoardPatch({ operations, dryRun?, reason? })` |
-| What changed recently | `listTaskActivity({ taskId?, limit? })` |
+| Create / edit / move / reorder a card | `createTask`, `updateTask` |
+| Launch a shell assignment from a card | `createMissionFromTask({ taskId, kind? })` |
+| Delete a board permanently | `deleteTaskProject({ path })` — never the open board |
+
+### Extended specialist tools (22 tools, on demand via escape-hatch meta-tools)
+
+Use `discoverAppTools({ query?, category?, names? })` to inspect schemas, `callExtendedReadTool({ tool, arguments })` for read-only tools, and `callExtendedTool({ tool, arguments, confirmDestructive? })` for mutating/destructive tools (`confirmDestructive: true` required for destructive tools):
+
+| Category | Specialist tools |
+| --- | --- |
+| `projects` | `listTaskProjects`, `openTaskProject`, `createTaskProject`, `updateTaskProject` |
+| `columns` | `listTaskColumns`, `createTaskColumn`, `updateTaskColumn`, `deleteTaskColumn` |
+| `tasks` | `deleteTask` |
+| `comments` | `createTaskComment`, `updateTaskComment`, `deleteTaskComment` |
+| `checklists` | `createTaskChecklist`, `updateTaskChecklist`, `deleteTaskChecklist`, `createTaskChecklistItem`, `updateTaskChecklistItem`, `deleteTaskChecklistItem` |
+| `links` | `addTaskResourceLink`, `removeTaskResourceLink` |
+| `board` | `applyTaskBoardPatch` (bulk restructuring & snapshot restore) |
+| `activity` | `listTaskActivity` |
 
 Every tool has a UI twin: the same operation the user performs on the
 board (New board, the title and description fields, the board
